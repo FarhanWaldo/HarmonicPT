@@ -1,0 +1,20 @@
+{
+	"authors": [
+		"Farhan Wali"
+	],
+	"copyright": "Copyright © 2019, Farhan Wali",
+	"dependencies": {
+		"derelict-sdl2": "~>2.1.4"
+	},
+	"description": "A Physically Based Path Tracing Renderer written in D",
+	"license": "proprietary",
+	"name": "d-pathtracer",
+
+	"sourceFiles": ["source/stb_image_write.o"],
+
+	"configurations" : [
+		{
+			"name": "release"
+		}
+	]
+}
