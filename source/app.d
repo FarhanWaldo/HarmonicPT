@@ -1,18 +1,10 @@
-/*
-import std.stdio;
-
-import derelict.sdl2.sdl;
-
-void main()
-{
-	writeln("Edit source/app.d to start your project. Hey");
-}
-*/
 
 import core.memory;
 import std.stdio;
 import std.algorithm;
 import std.math;
+
+import derelict.sdl2.sdl;
 
 import fwmath;
 import image;
@@ -21,6 +13,12 @@ import camera;
 
 void main( string[] args)
 {
+	// Load the SDL 2 library. 
+    DerelictSDL2.load();
+
+
+	writeln("Loaded the derelict-sdl2 bindings!");
+ 
     // Disable the garbage collector
     GC.disable;
 
