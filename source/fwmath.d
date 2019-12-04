@@ -1,5 +1,42 @@
 import std.math;
 
+//////////////////////////////////////////
+//
+//  Utilities
+//
+//////////////////////////////////////////
+
+const float PI					= 3.14159265359f;
+const float TAU 				= 6.28318530718f;
+const float PI_OVER_4   		= 0.78539816339f;
+
+const float INV_PI				= 0.31830988618f;
+const float INV_TAU				= 0.15915494309f;		
+const float INV_PI2				= 0.10132118364f;
+
+// Converts degrees into radians
+pure const T DegreesToRad( T )( in T degrees ) { return degrees*0.01745329251; }
+
+pure const T Max( T )( in T a, in T b ) { return  ( a > b ) ? a : b ;  }
+pure const T Min( T )( in T a, in T b ) { return  ( a < b ) ? a : b ;  }
+
+// Clamps a value 'val' to the closed interval [min, max]
+pure const T Clamp( T )( T val, T min, T max ) {
+    if ( val < min ) { return min; }
+    else if ( val > max ) { return max; }
+    
+    return val;
+}
+
+
+// pure const 
+
+//////////////////////////////////////////
+//
+//  Vector Types
+//
+//////////////////////////////////////////
+
 // alias VecT!( uint, 2 ) vec2ui;
 // alias VecT!( uint, 3 ) vec3ui;
 // alias VecT!( uint, 4 ) vec4ui;
@@ -12,6 +49,8 @@ alias VecT!(double, 2) vec2d;
 alias VecT!(double, 3) vec3d;
 alias VecT!(double, 4) vec4d;
 
+//  Default vecX types are floating point!
+//
 alias vec2f vec2;
 alias vec3f vec3;
 alias vec4f vec4;
@@ -102,7 +141,7 @@ struct VecT( Type, int Dim ) //if (( Dim >= 2 ) && Dim ( <= 4 ))
     }
 
     pure const VecT
-    opBinary( string op )( float f ) 
+    opBinary( string op )( valueType f ) 
     {
         VecT v;
 
@@ -115,7 +154,7 @@ struct VecT( Type, int Dim ) //if (( Dim >= 2 ) && Dim ( <= 4 ))
     }
 
     pure const VecT
-    opBinaryRight( string op )( float f )
+    opBinaryRight( string op )( valueType f )
     {
         VecT v;
 
@@ -127,183 +166,17 @@ struct VecT( Type, int Dim ) //if (( Dim >= 2 ) && Dim ( <= 4 ))
         return v;
     }
 }
-/*
+
 //
-//  Math primitives
-//
-
-struct vec3
-{
-    union
-    {
-        struct 
-        {
-            float x, y, z;
-        }
-
-        struct
-        {
-            float r, g, b;
-        }
-
-        float[3] d;
-    }
-
-    pure const float
-    magnitude()
-    {
-        return sqrt( x*x + y*y + z*z );
-    }
-
-    void normalise()
-    {
-        float invMag = 1.0f / magnitude();
-        x *= invMag;
-        y *= invMag;
-        z *= invMag;
-    }
-
-    pure const vec3
-    opBinary( string op )( vec3 rhs )
-    {
-        return mixin( "vec3( x"~op~"rhs.x, y"~op~"rhs.y, z"~op~"rhs.z)");
-    }
-
-    pure const vec3
-    opBinary( string op )( float v )
-    {
-        return mixin( "vec3( v"~op~"x, v"~op~"y, z"~op~"z )" );
-    }
-
-    pure const vec3
-    opBinaryRight( string op )( float v )
-    {
-        return mixin( "vec3( v"~op~"x, v"~op~"y, z"~op~"z )" );
-    }
-
-}
-
-struct vec4
-{
-    union
-    {
-        struct
-        {
-            float x, y, z, w;
-        }
-
-        struct
-        {
-            float r, g, b, a;
-        }
-
-        // Quaternion representation
-        //
-        struct
-        {
-            vec3    axis;
-            float   angle;
-        }
-
-        float[4] d;
-    }
-
-    float magnitude()
-    {
-        return sqrt( x*x + y*y + z*z + w*w );
-    }
-
-    void normalise()
-    {
-        float invMag = 1.0f / magnitude();
-        x *= invMag;
-        y *= invMag;
-        z *= invMag;
-        x *= invMag;
-    }
-
-    vec4 opMul( float scalar )
-    {
-        return vec4( x*scalar, y*scalar, z*scalar, w*scalar );
-    }
-
-    vec4 opAdd( vec4 v2 )
-    {
-        return vec4( x + v2.x, y + v2.y, z + v2.z, w + v2.w );
-    }
-
-    vec4 opSub( vec4 v2 )
-    {
-        return vec4( x - v2.x, y - v2.y, z - v2.z, w - v2.w );
-    }
-
-    vec4 opDiv( float scalar )
-    {
-        float invScalar =  1.0f/scalar;
-        return vec4( x*invScalar, y*invScalar, z*invScalar, w*invScalar );
-    }
-}
-
-struct vec2
-{
-    union
-    {
-        struct
-        {
-            float x, y;
-        }
-
-        struct
-        {
-            float u, v;
-        }
-
-        float[2] d;
-    }
-
-    float magnitude()
-    {
-        return sqrt( x*x + y*y );
-    }
-
-    void normalise()
-    {
-        float invMag = 1.0f / magnitude();
-        x *= invMag;
-        y *= invMag;
-    }
-
-    vec2 opMul( float scalar )
-    {
-        return vec2( x*scalar, y*scalar );
-    }
-
-    vec2 opAdd( vec2 v2 )
-    {
-        return vec2( x + v2.x, y + v2.y  );
-    }
-
-    vec2 opSub( vec2 v2 )
-    {
-        return vec2( x - v2.x, y - v2.y );
-    }
-
-    vec2 opDiv( float scalar )
-    {
-        float invScalar =  1.0f/scalar;
-        return vec2( x*invScalar, y*invScalar );
-    }
-}
-
-*/
-//
-//  Math primitive functions
+//  Vector Utility Functions
 //
 
-pure vec3
-v_cross( in vec3 a, in vec3 b )
+//  Cross product is only valid for 3 dimensional vectors
+//
+pure VecT!( T, 3 )
+v_cross( T )( in VecT!( T, 3 ) a, in VecT!( T , 3 ) b )
 {
-    return vec3(
+    return VecT!( T, 3 )(
             a.y*b.z - b.y*a.z,
             b.x*a.z - a.x*b.z,
             a.x*b.y - b.x*a.y  );
@@ -315,6 +188,7 @@ v_normalise( in vec3 v )
     float magnitude = 1.0f/v.magnitude();
     return magnitude * v;
 }
+
 
 
 //
