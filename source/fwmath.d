@@ -1,5 +1,19 @@
 import std.math;
 
+alias ulong     u64;
+alias uint      u32;
+alias ushort    u16;
+alias ubyte     u8;
+
+alias long      i64;
+alias int       i32;
+alias short     i16;
+alias byte      i8;
+
+alias double    f64;
+alias float     f32;
+
+
 //////////////////////////////////////////
 //
 //  Utilities
@@ -15,19 +29,47 @@ const float INV_TAU				= 0.15915494309f;
 const float INV_PI2				= 0.10132118364f;
 
 // Converts degrees into radians
-pure const T DegreesToRad( T )( in T degrees ) { return degrees*0.01745329251; }
+pure T DegreesToRad( T )( in T degrees ) { return degrees*0.01745329251; }
 
-pure const T Max( T )( in T a, in T b ) { return  ( a > b ) ? a : b ;  }
-pure const T Min( T )( in T a, in T b ) { return  ( a < b ) ? a : b ;  }
+pure T Max( T )( in T a, in T b ) { return  ( a > b ) ? a : b ;  }
+pure T Min( T )( in T a, in T b ) { return  ( a < b ) ? a : b ;  }
+
+pure T Abs( T )( in T a )         { return  ( a < T(0) ) ? -a : a; }
 
 // Clamps a value 'val' to the closed interval [min, max]
-pure const T Clamp( T )( T val, T min, T max ) {
+pure T Clamp( T )( T val, T min, T max ) {
     if ( val < min ) { return min; }
     else if ( val > max ) { return max; }
     
     return val;
 }
 
+pure float
+frand( int* seed )
+{
+    union frandT
+    {
+        float   fres;
+        uint    ires;
+    }
+
+    seed[0] *= 16807;
+    frandT v;
+    v.ires = ((( cast(uint) seed[0] ) >> 9 ) | 0x3f800000 );
+    return v.fres - 1.0f;
+}
+
+// struct RNG
+// {
+//     i32 m_seed {};
+
+//     this( i32 seed )
+//     {
+//         this.m_seed = seed;
+//     }
+
+//     pure float rand() {  return frand(&m_seed); }
+// }
 
 // pure const 
 
@@ -45,9 +87,9 @@ alias VecT!( float, 2 ) vec2f;
 alias VecT!( float, 3 ) vec3f;
 alias VecT!( float, 4 ) vec4f;
 
-alias VecT!(double, 2) vec2d;
-alias VecT!(double, 3) vec3d;
-alias VecT!(double, 4) vec4d;
+alias VecT!( double, 2 ) vec2d;
+alias VecT!( double, 3 ) vec3d;
+alias VecT!( double, 4 ) vec4d;
 
 //  Default vecX types are floating point!
 //
@@ -131,6 +173,12 @@ struct VecT( Type, int Dim ) //if (( Dim >= 2 ) && Dim ( <= 4 ))
         else static assert(0, "Too many dimensions!");
     }
 
+    void
+    normalise()
+    {
+        this = (Type( 1 )/this.magnitude)*this;
+    }
+
     pure const VecT
     opBinary( string op )( VecT rhs )
     {
@@ -167,6 +215,35 @@ struct VecT( Type, int Dim ) //if (( Dim >= 2 ) && Dim ( <= 4 ))
     }
 }
 
+alias QuatT!( float ) Quatf;
+alias QuatT!( double ) Quatd;
+
+struct QuatT( Type )
+{
+    union
+    {
+        Type[4] data;
+
+        struct {    Type x, y, z, w;   }
+
+        struct {
+            VecT!( Type, 3 ) m_axis;
+            Type             m_angle;
+        }
+
+        VecT!( Type, 4 ) vec;
+    }
+
+    // this( in VecT!( Type, 3 ) axis, Type angle )
+    // {
+    //     this.m_axis = axis;
+    //     this.m_angle = angle;
+    // }
+
+    alias data this;
+    alias Type valueType;
+}
+
 //
 //  Vector Utility Functions
 //
@@ -174,7 +251,7 @@ struct VecT( Type, int Dim ) //if (( Dim >= 2 ) && Dim ( <= 4 ))
 //  Cross product is only valid for 3 dimensional vectors
 //
 pure VecT!( T, 3 )
-v_cross( T )( in VecT!( T, 3 ) a, in VecT!( T , 3 ) b )
+v_cross( T ) ( in VecT!( T, 3 ) a, in VecT!( T , 3 ) b )
 {
     return VecT!( T, 3 )(
             a.y*b.z - b.y*a.z,
@@ -189,7 +266,60 @@ v_normalise( in vec3 v )
     return magnitude * v;
 }
 
+pure T
+v_dot( T, int Dim ) ( in VecT!( T, Dim ) a, in VecT!( T, Dim ) b )
+{
+    static if ( Dim == 2 ) return ( a.x*b.x + a.y*b.y );
+    else static if ( Dim == 3 ) return ( a.x*b.x + a.y*b.y + a.z*b.z );
+    else static assert( 0, "Invalid dimension for vector");
+}
 
+pure VecT!( T, Dim )
+v_lerp( T, int Dim ) ( in VecT!( T, Dim ) a, in VecT!( T, Dim ) b, T interpolant )
+{
+    return interpolant*a + ( T(1) - interpolant )*b;
+}
+
+pure QuatT!( T )
+CreateRotationQuat( T )( in VecT!( T, 3 ) axis, T angle )
+{
+    QuatT!( T ) quat;
+    T halfAngle = T(0.5)*angle;
+    T cosHalfAngle = T( cos( halfAngle ) );
+    T sinHalfAngle = T( sin( halfAngle ) );
+
+    quat.m_angle = cosHalfAngle;
+    quat.m_axis = sinHalfAngle*axis;
+
+    quat.vec.normalise();
+
+    return quat;
+}
+
+pure QuatT!( T )
+QuatT_Mult( T ) ( in QuatT!( T ) qA, in QuatT!( T ) qB )
+{
+    QuatT!( T ) c;
+
+    c.m_angle = qA.m_angle*qB.m_angle - v_dot!( T, 3 )( qA.m_axis, qB.m_axis );
+    c.m_axis  = v_cross( qA.m_axis, qB.m_axis ) + qA.m_angle*qB.m_axis + qB.m_angle*qA.m_axis;
+
+    return c;
+}
+
+pure VecT!( T, 3 )
+RotateVec3( T ) ( in VecT!( T, 3 ) v, in QuatT!( T ) rotQuat )
+{
+    alias QuatT!(T) _Quat;
+
+    _Quat v4 = { m_axis : v, m_angle : T(0) };
+    _Quat antiRotQuat = { m_axis : T(-1)*rotQuat.m_axis, m_angle : rotQuat.m_angle };
+
+    v4 = QuatT_Mult( rotQuat, v4 );
+    v4 = QuatT_Mult( v4, antiRotQuat );
+
+    return v4.m_axis;    
+}
 
 //
 //  Geometry primitives

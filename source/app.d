@@ -16,6 +16,11 @@ void main( string[] args)
     uint imageWidth = 640;
     uint imageHeight = 480;
 
+	vec3 axis_x = vec3( 1.0f, 0.0f, 0.0f );
+	Quatf rotation = CreateRotationQuat( vec3( 0.0f, 1.0f, 0.0f ), DegreesToRad( 90.0f ) );
+	vec3 newVec = RotateVec3( axis_x, rotation );
+	writeln( newVec );
+
 	// Load the SDL 2 library. 
     DerelictSDL2.load();
 
