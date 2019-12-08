@@ -2,39 +2,44 @@ import std.algorithm;
 
 extern(C) int stbi_write_png(char *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
 
-struct ImageBuffer
+struct ImageBuffer( T )
 {
-    uint        imageWidth;
-    uint        imageHeight;
-    uint        componentsPerPixel;
-    uint        numPixels;
-    float[]     pixelData;
+    alias T ChannelType;
+
+    uint            m_imageWidth;
+    uint            m_imageHeight;
+    uint            m_componentsPerPixel;
+    uint            m_numPixels;
+    T[]             m_pixelData;
 };
 
 void
-ImageBuffer_Init( ImageBuffer* pImageBuffer,
-                  int          width,
-                  int          height,
-                  int          componentsPerPixel )
+ImageBuffer_Init(T)(
+    ImageBuffer!T* pImageBuffer,
+    int          width,
+    int          height,
+    int          componentsPerPixel )
 {
-    pImageBuffer.imageWidth = width;
-    pImageBuffer.imageHeight = height;
-    pImageBuffer.componentsPerPixel = componentsPerPixel;
+    pImageBuffer.m_imageWidth = width;
+    pImageBuffer.m_imageHeight = height;
+
+    pImageBuffer.m_componentsPerPixel = componentsPerPixel;
 
     uint numPixels = width * height;
-    pImageBuffer.numPixels = numPixels;
+    pImageBuffer.m_numPixels = numPixels;
 
-    // Allocate memory
-    pImageBuffer.pixelData.length = numPixels * componentsPerPixel;
+    //  Allocate memory
+    //
+    pImageBuffer.m_pixelData.length = numPixels * componentsPerPixel;
 }
 
 void
-ImageBuffer_WriteToPng( ImageBuffer* pImageBuffer, char* filename )
+ImageBuffer_WriteToPng(T)( ImageBuffer!T* pImageBuffer, char* filename )
 {
-    int imageHeight             = pImageBuffer.imageHeight;
-    int imageWidth              = pImageBuffer.imageWidth;
-    int numComponents           = pImageBuffer.componentsPerPixel;
-    float* pImageBufferData     = &pImageBuffer.pixelData[0];
+    int imageHeight             = pImageBuffer.m_imageHeight;
+    int imageWidth              = pImageBuffer.m_imageWidth;
+    int numComponents           = pImageBuffer.m_componentsPerPixel;
+    float* pImageBufferData     = &pImageBuffer.m_pixelData[0];
 
     // Create 32 bpp image for png
     //

@@ -75,7 +75,7 @@ frand( int* seed )
 
 //////////////////////////////////////////
 //
-//  Vector Types
+//  Vector Primitives
 //
 //////////////////////////////////////////
 
@@ -164,6 +164,7 @@ struct VecT( Type, int Dim ) //if (( Dim >= 2 ) && Dim ( <= 4 ))
         }
     }
 
+
     pure const Type
     magnitude()
     {
@@ -244,9 +245,11 @@ struct QuatT( Type )
     alias Type valueType;
 }
 
+//////////////////////////////////////////
 //
-//  Vector Utility Functions
+//  Vector Utilities
 //
+//////////////////////////////////////////
 
 //  Cross product is only valid for 3 dimensional vectors
 //
@@ -267,7 +270,7 @@ v_normalise( in vec3 v )
 }
 
 pure T
-v_dot( T, int Dim ) ( in VecT!( T, Dim ) a, in VecT!( T, Dim ) b )
+v_dot( T, int Dim ) ( in ref VecT!( T, Dim ) a, in ref VecT!( T, Dim ) b )
 {
     static if ( Dim == 2 ) return ( a.x*b.x + a.y*b.y );
     else static if ( Dim == 3 ) return ( a.x*b.x + a.y*b.y + a.z*b.z );
@@ -275,13 +278,19 @@ v_dot( T, int Dim ) ( in VecT!( T, Dim ) a, in VecT!( T, Dim ) b )
 }
 
 pure VecT!( T, Dim )
-v_lerp( T, int Dim ) ( in VecT!( T, Dim ) a, in VecT!( T, Dim ) b, T interpolant )
+v_lerp( T, int Dim ) ( in ref VecT!( T, Dim ) a, in ref VecT!( T, Dim ) b, T interpolant )
 {
     return interpolant*a + ( T(1) - interpolant )*b;
 }
 
+//////////////////////////////////////////
+//
+//  Quaternion Utilities
+//
+//////////////////////////////////////////
+
 pure QuatT!( T )
-CreateRotationQuat( T )( in VecT!( T, 3 ) axis, T angle )
+CreateRotationQuat( T )( auto ref VecT!( T, 3 ) axis, T angle )
 {
     QuatT!( T ) quat;
     T halfAngle = T(0.5)*angle;
@@ -297,7 +306,7 @@ CreateRotationQuat( T )( in VecT!( T, 3 ) axis, T angle )
 }
 
 pure QuatT!( T )
-QuatT_Mult( T ) ( in QuatT!( T ) qA, in QuatT!( T ) qB )
+QuatT_Mult( T ) ( auto ref QuatT!( T ) qA, in ref QuatT!( T ) qB )
 {
     QuatT!( T ) c;
 
@@ -308,7 +317,7 @@ QuatT_Mult( T ) ( in QuatT!( T ) qA, in QuatT!( T ) qB )
 }
 
 pure VecT!( T, 3 )
-RotateVec3( T ) ( in VecT!( T, 3 ) v, in QuatT!( T ) rotQuat )
+RotateVec3( T ) ( auto ref VecT!( T, 3 ) v, auto ref QuatT!( T ) rotQuat )
 {
     alias QuatT!(T) _Quat;
 
@@ -318,17 +327,291 @@ RotateVec3( T ) ( in VecT!( T, 3 ) v, in QuatT!( T ) rotQuat )
     v4 = QuatT_Mult( rotQuat, v4 );
     v4 = QuatT_Mult( v4, antiRotQuat );
 
-    return v4.m_axis;    
+    return v4.m_axis;
 }
 
+//////////////////////////////////////////
 //
-//  Geometry primitives
+//  Matrix Primitives & Utilities
 //
+//////////////////////////////////////////
+
+alias Mat4x4T!( float ) Mat4x4f;
+alias Mat4x4T!( double ) Mat4x4d;
+
+alias Mat4x4f Mat4x4;
+
+struct Mat4x4T( T )
+{
+    union
+    {
+        T[ 16 ] d;
+        T[4][4] dd;
+
+        struct 
+        {
+            T a1, a2, a3, a4;
+            T b1, b2, b3, b4;
+            T c1, c2, c3, c4;
+            T d1, d2, d3, d4;
+        }
+    }
+
+    alias d this;
+}
+
+pure Mat4x4T!( T )
+Mat4x4_Identity( T ) ()
+{
+    Mat4x4T!( T ) m = { d: [
+        T(1), T(0), T(0), T(0),
+        T(0), T(1), T(0), T(0),
+        T(0), T(0), T(1), T(0),
+        T(0), T(0), T(0), T(1) ]
+    };
+
+    return m;
+}
+
+pure T
+Mat4x4_Determinant( T )( in ref Mat4x4T!( T ) m )
+{
+	return m.a1*m.b2*m.c3*m.d4 - m.a1*m.b2*m.c4*m.d3 + m.a1*m.b3*m.c4*m.d2 - m.a1*m.b3*m.c2*m.d4
+		+ m.a1*m.b4*m.c2*m.d3 - m.a1*m.b4*m.c3*m.d2 - m.a2*m.b3*m.c4*m.d1 + m.a2*m.b3*m.c1*m.d4
+		- m.a2*m.b4*m.c1*m.d3 + m.a2*m.b4*m.c3*m.d1 - m.a2*m.b1*m.c3*m.d4 + m.a2*m.b1*m.c4*m.d3
+		+ m.a3*m.b4*m.c1*m.d2 - m.a3*m.b4*m.c2*m.d1 + m.a3*m.b1*m.c2*m.d4 - m.a3*m.b1*m.c4*m.d2
+		+ m.a3*m.b2*m.c4*m.d1 - m.a3*m.b2*m.c1*m.d4 - m.a4*m.b1*m.c2*m.d3 + m.a4*m.b1*m.c3*m.d2
+		- m.a4*m.b2*m.c3*m.d1 + m.a4*m.b2*m.c1*m.d3 - m.a4*m.b3*m.c1*m.d2 + m.a4*m.b3*m.c2*m.d1;
+}
+
+pure Mat4x4T!( T )
+Mat4x4_Invert( T )( in ref Mat4x4T!( T ) m )
+{
+	T det = Mat4x4_Determinant( m );
+	Mat4x4!T inverseM = 0;
+
+	// Matrix is not invertible; return a zeroed out matrix for clarity
+	//		since the inverse operator should never return a zero matrix
+	if ( det == T(0)) { return inverseM; }
+
+	T invdet = T(1)/det;
+
+	inverseM.a1 = invdet  * (m.b2 * (m.c3 * m.d4 - m.c4 * m.d3) + m.b3 * (m.c4 * m.d2 - m.c2 * m.d4) + m.b4 * (m.c2 * m.d3 - m.c3 * m.d2));
+	inverseM.a2 = -invdet * (m.a2 * (m.c3 * m.d4 - m.c4 * m.d3) + m.a3 * (m.c4 * m.d2 - m.c2 * m.d4) + m.a4 * (m.c2 * m.d3 - m.c3 * m.d2));
+	inverseM.a3 = invdet  * (m.a2 * (m.b3 * m.d4 - m.b4 * m.d3) + m.a3 * (m.b4 * m.d2 - m.b2 * m.d4) + m.a4 * (m.b2 * m.d3 - m.b3 * m.d2));
+	inverseM.a4 = -invdet * (m.a2 * (m.b3 * m.c4 - m.b4 * m.c3) + m.a3 * (m.b4 * m.c2 - m.b2 * m.c4) + m.a4 * (m.b2 * m.c3 - m.b3 * m.c2));
+	inverseM.b1 = -invdet * (m.b1 * (m.c3 * m.d4 - m.c4 * m.d3) + m.b3 * (m.c4 * m.d1 - m.c1 * m.d4) + m.b4 * (m.c1 * m.d3 - m.c3 * m.d1));
+	inverseM.b2 = invdet  * (m.a1 * (m.c3 * m.d4 - m.c4 * m.d3) + m.a3 * (m.c4 * m.d1 - m.c1 * m.d4) + m.a4 * (m.c1 * m.d3 - m.c3 * m.d1));
+	inverseM.b3 = -invdet * (m.a1 * (m.b3 * m.d4 - m.b4 * m.d3) + m.a3 * (m.b4 * m.d1 - m.b1 * m.d4) + m.a4 * (m.b1 * m.d3 - m.b3 * m.d1));
+	inverseM.b4 = invdet  * (m.a1 * (m.b3 * m.c4 - m.b4 * m.c3) + m.a3 * (m.b4 * m.c1 - m.b1 * m.c4) + m.a4 * (m.b1 * m.c3 - m.b3 * m.c1));
+	inverseM.c1 = invdet  * (m.b1 * (m.c2 * m.d4 - m.c4 * m.d2) + m.b2 * (m.c4 * m.d1 - m.c1 * m.d4) + m.b4 * (m.c1 * m.d2 - m.c2 * m.d1));
+	inverseM.c2 = -invdet * (m.a1 * (m.c2 * m.d4 - m.c4 * m.d2) + m.a2 * (m.c4 * m.d1 - m.c1 * m.d4) + m.a4 * (m.c1 * m.d2 - m.c2 * m.d1));
+	inverseM.c3 = invdet  * (m.a1 * (m.b2 * m.d4 - m.b4 * m.d2) + m.a2 * (m.b4 * m.d1 - m.b1 * m.d4) + m.a4 * (m.b1 * m.d2 - m.b2 * m.d1));
+	inverseM.c4 = -invdet * (m.a1 * (m.b2 * m.c4 - m.b4 * m.c2) + m.a2 * (m.b4 * m.c1 - m.b1 * m.c4) + m.a4 * (m.b1 * m.c2 - m.b2 * m.c1));
+	inverseM.d1 = -invdet * (m.b1 * (m.c2 * m.d3 - m.c3 * m.d2) + m.b2 * (m.c3 * m.d1 - m.c1 * m.d3) + m.b3 * (m.c1 * m.d2 - m.c2 * m.d1));
+	inverseM.d2 = invdet  * (m.a1 * (m.c2 * m.d3 - m.c3 * m.d2) + m.a2 * (m.c3 * m.d1 - m.c1 * m.d3) + m.a3 * (m.c1 * m.d2 - m.c2 * m.d1));
+	inverseM.d3 = -invdet * (m.a1 * (m.b2 * m.d3 - m.b3 * m.d2) + m.a2 * (m.b3 * m.d1 - m.b1 * m.d3) + m.a3 * (m.b1 * m.d2 - m.b2 * m.d1));
+	inverseM.d4 = invdet  * (m.a1 * (m.b2 * m.c3 - m.b3 * m.c2) + m.a2 * (m.b3 * m.c1 - m.b1 * m.c3) + m.a3 * (m.b1 * m.c2 - m.b2 * m.c1));
+
+
+	return inverseM;
+}
+
+pure Mat4x4T!(T)
+Mat4x4_Translation( T, U )( auto ref in VecT!( U, 3 ) translate )
+{
+    Mat4x4T!T m = { d : [
+        T(1), T(0), T(0), T( translate.x ),
+        T(0), T(1), T(0), T( translate.y ),
+        T(0), T(0), T(1), T( translate.z ),
+        T(0), T(0), T(0), T(1)
+    ]};
+
+    return m;
+}
+pure Mat4x4T!T
+Mat4x4_Scale( T )( in ref VecT!( T, 3 ) scale )
+{
+    Mat4x4T!T m = { d: [
+        T( scale.x ), T(0), T(0), T(0),
+        T(0), T( scale.y), T(0), T(0),
+        T(0), T(0), T( scale.z ), T(0),
+        T(0), T(0), T(0), T(1)
+    ]};
+
+    return m;
+}
+
+pure VecT!(T,3)
+TransformPoint( T )( in ref Mat4x4T!T m, in ref VecT!( T, 3 ) p )
+{
+    VecT!(T,3) xformedP = vec3(
+		m.d[0]*p.x + m.d[1]*p.y + m.d[2]*p.z + m.d[3],
+		m.d[4]*p.x + m.d[5]*p.y + m.d[6]*p.z + m.d[7],
+		m.d[8]*p.x + m.d[9]*p.y + m.d[10]*p.z + m.d[11]
+    );
+
+    return xformedP;
+}
+
+pure VecT!(T,3)
+TransformDirection( T )( in ref Mat4x4T!T m, in ref VecT!( T, 3 ) p )
+{
+    VecT!(T,3) xformedDir = vec3(
+		m.d[0]*p.x + m.d[1]*p.y + m.d[2]*p.z,
+		m.d[4]*p.x + m.d[5]*p.y + m.d[6]*p.z,
+		m.d[8]*p.x + m.d[9]*p.y + m.d[10]*p.z
+    );
+
+    return xformedP;
+}
+
+pure Mat4x4T!T
+Mat4x4_RotationFromQuat( T )( in ref QuatT!(T) rotQuat )
+{
+    alias rotQuat.vec rot;
+
+	float x2 = rot.x*rot.x;
+	float y2 = rot.y*rot.y;
+	float z2 = rot.z*rot.z;
+	//float w2 = rot.w*rot.w;
+
+	float xy = rot.x * rot.y;
+	float xz = rot.x * rot.z;
+	float xw = rot.x * rot.w;
+
+	float yz = rot.y*rot.z;
+	float yw = rot.y*rot.w;
+
+	float zw = rot.z*rot.w;
+
+	Mat4x4T!T m = { d : [
+		1.0f - 2.0f*y2 - 2.0f*z2, 2.0f*xy - 2.0f*zw, 2.0f*xz + 2.0f*yw, 0.0f,
+		2.0f*xy + 2.0f*zw, 1.0f - 2.0f*x2 - 2.0f*z2, 2.0f*yz - 2.0f*xw, 0.0f,
+		2.0f*xz - 2.0f*yw, 2.0f*yz + 2.0f*xw, 1.0f - 2.0f*x2 - 2.0f*y2, 0.0f,
+		0.0f, 0.0f, 0.0f, 1.0f
+    ]};
+    
+    return m;
+}
+
+/*
+ General form of the Projection Matrix
+
+		 uh = Cot( fov/2 ) == 1/Tan(fov/2)
+		 uw / uh = 1/aspect
+ 
+		   uw         0       0       0
+			0        uh       0       0
+			0         0      f/(f-n)  1
+			0         0    -fn/(f-n)  0
+*/
+pure Mat4x4T!T
+Mat4x4_OrthoProjection( T )( float width, float height, float _near, float _far )
+{
+    Mat4x4T!T m = Mat4x4_Identity!T();
+
+	float  fRange = 1.0f / (_near - _far );
+
+	m.dd[0][0] = 2.0f / width;
+	m.dd[1][1] = 2.0f / height;
+	m.dd[2][2] = fRange;
+	m.dd[3][3] = 1.0f;
+
+	m.dd[3][2] = fRange * _near;
+
+    return m;
+}
+
+/*
+How to calculate a view matrix:
+
+		zaxis = normal(At - Eye)
+		xaxis = normal(cross(Up, zaxis))
+		yaxis = cross(zaxis, xaxis)
+
+		xaxis.x           yaxis.x           zaxis.x          0
+		xaxis.y           yaxis.y           zaxis.y          0
+		xaxis.z           yaxis.z           zaxis.z          0
+		- dot(xaxis, eye) - dot(yaxis, eye) - dot(zaxis, eye)  l
+
+*/
+pure Mat4x4T!T
+Mat4x4_LookAtLH( T )(
+    in VecT!(T,3) pos,
+    in VecT!(T,3) target,
+    in VecT!(T,3) up
+)
+{
+    Mat4x4!T m = {};
+
+	vec3 zaxis = v_normalise(target - pos);
+	vec3 xaxis = v_normalise( v_cross(up, zaxis));
+	vec3 yaxis = v_cross(zaxis, xaxis);
+
+	m.dd[0][0] = xaxis.x;
+	m.dd[0][1] = yaxis.x;
+	m.dd[0][2] = zaxis.x;
+
+	m.dd[1][0] = xaxis.y;
+	m.dd[1][1] = yaxis.y;
+	m.dd[1][2] = zaxis.y;
+
+	m.dd[2][0] = xaxis.z;
+	m.dd[2][1] = yaxis.z;
+	m.dd[2][2] = zaxis.z;
+
+	m.dd[3][0] = -v_dot(xaxis, pos);
+	m.dd[3][1] = -v_dot(yaxis, pos);
+	m.dd[3][2] = -v_dot(zaxis, pos);
+	m.dd[3][3] = 1.0f;
+
+    return m;
+}
+
+pure Mat4x4T!T
+Mat4x4_PerspectiveProjection( T ) (
+
+)
+{
+
+}
+
+pure void
+CreateCoordSystem( T )(
+    auto ref VecT!(T,3) e0,
+    out VecT!(T,3) e1,
+    out VecT!(T,3) e2 
+)
+{
+    if ( Abs( e0.x ) > Abs( e0.y ) )
+    {
+        e1 = v_normalise( VecT!(T,3)( -e0.z, T(0), e0.x ) );
+    }
+    else
+    {
+        e1 = v_normalise( VecT!(T,3) ( T(0), e0.z, -e0.y ) );
+    }
+
+    e2 = v_cross( e0, e1 );
+}
+
+//////////////////////////////////////////
+//
+//  Geometry Primitives
+//
+//////////////////////////////////////////
+
 
 struct Ray
 {
     vec3  m_origin;
-    vec3  m_dir;
+    vec3  m_dir;   
+}
+
+struct AABB {
+    vec3  m_min = vec3( float.max, float.max, float.max );
+    vec3  m_max = vec3( -float.max, -float.max, -float.max );
 }
 
 struct Sphere
@@ -336,6 +619,18 @@ struct Sphere
     vec3    m_centre;
     float   m_radius;
 }
+
+struct IntersectionResult
+{
+    bool    m_hit = false;
+    float   m_minT = float.max;         // Parametric position along Ray where the intersection point occurs
+    u64     m_index = cast(u64)-1;
+    vec2    m_roots;
+    vec3    m_contactNormal;
+    vec3    m_contactPos;
+    vec3    m_baryCoord;
+}
+
 
 
 pure vec3

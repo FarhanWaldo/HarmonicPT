@@ -13,6 +13,10 @@ import camera;
 
 void main( string[] args)
 {
+    // Disable the garbage collector
+    GC.disable;
+    writeln("hello world!");
+
     uint imageWidth = 640;
     uint imageHeight = 480;
 
@@ -21,8 +25,20 @@ void main( string[] args)
 	vec3 newVec = RotateVec3( axis_x, rotation );
 	writeln( newVec );
 
+	Mat4x4 m = {};
+	Mat4x4 i = Mat4x4_Identity!(float)();
+	writeln( "m = ", m );
+	writeln( "i = ", i );
+
+
+	Mat4x4 translateMat = Mat4x4_Translation!(float)( vec3( 4.0f, 0.3f, -1.0f ) );
+	writeln( translateMat );
 	// Load the SDL 2 library. 
     DerelictSDL2.load();
+
+	writeln( "newVec before xform = ", newVec );
+	vec3 xformP = TransformPoint( translateMat, newVec );
+	writeln( "newVec after xform = ", xformP );
 
 	SDL_Window* p_sdlWindow = null;
 	if ( SDL_Init( SDL_INIT_VIDEO ) < 0 )
@@ -48,10 +64,7 @@ void main( string[] args)
 		writeln("[ERROR] Could not create window %s", SDL_GetError() );
 	}
 
-    // Disable the garbage collector
-    GC.disable;
 
-    writeln("hello world!");
 
     Camera renderCam;
     Camera_Init( renderCam,
@@ -62,11 +75,23 @@ void main( string[] args)
 
     int tileSize = 64;
     float* pImageBufferData;
-    
-    ImageBuffer renderImage = ImageBuffer();
+	ubyte* pDisplayBufferData;
+
+	float whitepoint = 1.0f;
+	
+	//	Create an RGB (32 bits per channel) floating point render buffer
+	//
+    ImageBuffer!float renderImage = ImageBuffer!float ();
     ImageBuffer_Init( &renderImage, imageWidth, imageHeight, 3 /* RGB */ );
 
-    pImageBufferData = &renderImage.pixelData[0];
+	//	LDR (8 bits per channel) buffer for display
+	//	
+	ImageBuffer!ubyte displayImage = ImageBuffer!ubyte();
+	ImageBuffer_Init( &displayImage, imageWidth, imageHeight, 3 /* RGB */ );
+
+    pImageBufferData = &renderImage.m_pixelData[ 0 ];
+	pDisplayBufferData = &displayImage.m_pixelData[ 0 ];
+
     for ( uint row = 0; row < imageHeight; ++row )
     {
         for ( uint col = 0; col < imageWidth; ++col )
@@ -90,6 +115,21 @@ void main( string[] args)
         }
     }
 
+	//	Create LDR display buffer from HDR render buffer
+	//
+	for ( uint row = 0u; row < imageHeight; ++row )
+	{
+		for ( uint col = 0u; col < imageWidth; ++col )
+		{
+			uint pixelIndex = 3 * ( row * imageWidth + col );
+
+			// F_TODO:: sqrt approximates linear -> gamme space conversion
+			pDisplayBufferData[ pixelIndex ] = cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex ] / whitepoint ) ) * 256.0f );
+			pDisplayBufferData[ pixelIndex  + 1 ] = cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex + 1 ] / whitepoint ) ) * 256.0f );
+			pDisplayBufferData[ pixelIndex  + 2 ] = cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex + 2 ] / whitepoint ) ) * 256.0f );
+		}
+	}
+
     // Set up the pixel format color masks for RGB(A) byte arrays.
     // Only STBI_rgb (3) and STBI_rgb_alpha (4) are supported here!
     uint rmask, gmask, bmask, amask;
@@ -107,7 +147,8 @@ void main( string[] args)
 // #endif
 
     SDL_Surface* renderSurface = SDL_CreateRGBSurfaceFrom(
-                                    pImageBufferData,
+                                    // pImageBufferData,
+									pDisplayBufferData,
                                     imageWidth,
                                     imageHeight,
                                     24 /* bits per pixel */,
