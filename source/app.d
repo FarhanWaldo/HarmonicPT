@@ -77,7 +77,7 @@ void main( string[] args)
     float* pImageBufferData;
 	ubyte* pDisplayBufferData;
 
-	float whitepoint = 1.0f;
+	float whitepoint = 10.0f;
 	
 	//	Create an RGB (32 bits per channel) floating point render buffer
 	//
@@ -124,9 +124,9 @@ void main( string[] args)
 			uint pixelIndex = 3 * ( row * imageWidth + col );
 
 			// F_TODO:: sqrt approximates linear -> gamme space conversion
-			pDisplayBufferData[ pixelIndex ] = cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex ] / whitepoint ) ) * 256.0f );
-			pDisplayBufferData[ pixelIndex  + 1 ] = cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex + 1 ] / whitepoint ) ) * 256.0f );
-			pDisplayBufferData[ pixelIndex  + 2 ] = cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex + 2 ] / whitepoint ) ) * 256.0f );
+			pDisplayBufferData[ pixelIndex ] 		= cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex ] / whitepoint ) ) * 256.0f );
+			pDisplayBufferData[ pixelIndex  + 1 ] 	= cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex + 1 ] / whitepoint ) ) * 256.0f );
+			pDisplayBufferData[ pixelIndex  + 2 ] 	= cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex + 2 ] / whitepoint ) ) * 256.0f );
 		}
 	}
 

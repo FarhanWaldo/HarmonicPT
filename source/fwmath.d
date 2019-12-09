@@ -59,17 +59,17 @@ frand( int* seed )
     return v.fres - 1.0f;
 }
 
-// struct RNG
-// {
-//     i32 m_seed {};
+struct RNG
+{
+    i32 m_seed;
 
-//     this( i32 seed )
-//     {
-//         this.m_seed = seed;
-//     }
+    this( i32 seed )
+    {
+        this.m_seed = seed;
+    }
 
-//     pure float rand() {  return frand(&m_seed); }
-// }
+    float rand() {  return frand(&m_seed); }
+}
 
 // pure const 
 
@@ -569,14 +569,45 @@ Mat4x4_LookAtLH( T )(
     return m;
 }
 
+/*
+ General form of the Projection Matrix
+
+		 uh = Cot( fov/2 ) == 1/Tan(fov/2)
+		 uw / uh = 1/aspect
+ 
+		   uw         0       0       0
+			0        uh       0       0
+			0         0      f/(f-n)  1
+			0         0    -fn/(f-n)  0
+*/
 pure Mat4x4T!T
 Mat4x4_PerspectiveProjection( T ) (
-
-)
+    float fov,
+    float aspectRatio,
+    float nearDist,
+    float farDist )
 {
+    Mat4x4T!T m = {};
 
+	T frustumDepth = -(farDist - nearDist);
+	T invDepth = 1.0f / frustumDepth;
+
+	m.dd[1][1] = 1.0f / cast(T)(tan(0.5f * fov));
+	m.dd[0][0] = m.vv[1][1] / aspectRatio;
+	m.dd[2][2] = -farDist*invDepth;
+	m.dd[3][2] = farDist*nearDist*invDepth;
+	m.dd[2][3] = 1.0f;
+	m.dd[3][3] = 0.0f;
+
+    return m;
 }
 
+//	Create an orthonormal basis based on an input vector e0
+//	Params:
+//			e0 = input vector for constructing the basis. Make sure it's a unit vector
+//			e1 = 2nd basis vector (output)
+//			e2 = 3rd basis vector (output)
+//
 pure void
 CreateCoordSystem( T )(
     auto ref VecT!(T,3) e0,
@@ -630,8 +661,6 @@ struct IntersectionResult
     vec3    m_contactPos;
     vec3    m_baryCoord;
 }
-
-
 
 pure vec3
 Ray_AtT( in ref Ray pRay, float t )

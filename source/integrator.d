@@ -1,0 +1,4 @@
+interface IIntegrator
+{
+    void init();
+}
