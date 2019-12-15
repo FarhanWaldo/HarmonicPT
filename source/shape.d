@@ -1,3 +1,4 @@
+import std.math : sqrt;
 import fwmath;
 import interactions;
 
@@ -86,18 +87,60 @@ class ShapeSphere : BaseShape
     override pure const void
     Sample( in ref vec2 u, out Interaction newIntx )
     {
-        // return Interaction(); // STUB
+        // STUB
     }
 
     override pure const void
     Sample( in ref Interaction refPoint, in ref vec2 u, out Interaction newIntx )
     {
-        // return Interaction(); // STUB
+        // STUB
     }
 
     override bool
-    IntersectsRay( in ref Ray, out IntersectionResult intRes )
+    IntersectsRay( in ref Ray ray, out IntersectionResult intRes )
     {
-        return false;
+        bool intersects = false;
+        float tMin = Min( ray.m_maxT, intRes.m_minT );
+
+        vec3 oc = ray.m_origin - m_sphere.m_centre;
+        // Co-efficients of quadratic
+        float a = v_dot( ray.m_dir, ray.m_dir );
+        float b = v_dot( oc, ray.m_dir );
+        float c = v_dot( oc, oc ) - m_sphere.m_radius * m_sphere.m_radius;
+        float discriminant = b*b - a*c; // TODO:: Use Kahn's formulae with FMA to increase precision here
+
+        if ( discriminant > 0.0f ) 
+        {
+            float sqrtDiscriminant =  sqrt( discriminant );
+            float invA = 1.0f/a;
+            float temp = ( -1.0f*b - sqrtDiscriminant )*invA;
+
+            if ( temp > 0.0f && temp < tMin )
+            {
+                tMin = temp;
+                intersects = true;
+            }
+
+            temp = ( -1*b + sqrtDiscriminant ) * invA;
+            if ( temp > 0.0f && temp < tMin )
+            {
+                tMin = temp;
+                intersects = true;
+            }
+        }
+
+        if ( intersects )
+        {
+            vec3 intersectP = Ray_AtT( ray, tMin );
+
+            intRes.m_hit = true;
+            intRes.m_minT = tMin;
+            intRes.m_index = 0; // TODO:: This feels unnecessary
+            // intRes.m_roots
+            intRes.m_contactPos = intersectP;
+            intRes.m_contactNormal = v_normalise( intersectP - m_sphere.m_centre );
+        }
+
+        return intersects;
     }
 }

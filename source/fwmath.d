@@ -646,6 +646,7 @@ struct Ray
 {
     vec3  m_origin;
     vec3  m_dir;   
+    float m_maxT = float.max;
 }
 
 struct AABB {
