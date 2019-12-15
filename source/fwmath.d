@@ -140,6 +140,14 @@ struct VecT( Type, int Dim ) //if (( Dim >= 2 ) && Dim ( <= 4 ))
     alias Dim   dim;
     alias Type  valueType;
 
+    this( Type v )
+    {
+        data[0] = v;
+        data[1] = v;
+        static if ( Dim >= 3 ) data[2] = v;
+        static if ( Dim >= 4 ) data[3] = v;
+    }
+
     //  Specialise constructor by dimension
     //
     static if ( Dim == 2 ) {
