@@ -503,7 +503,7 @@ Mat4x4_RotationFromQuat( T )( in ref QuatT!(T) rotQuat )
     return m;
 }
 
-/*
+/**
  General form of the Projection Matrix
 
 		 uh = Cot( fov/2 ) == 1/Tan(fov/2)
@@ -531,7 +531,7 @@ Mat4x4_OrthoProjection( T )( float width, float height, float _near, float _far 
     return m;
 }
 
-/*
+/**
 How to calculate a view matrix:
 
 		zaxis = normal(At - Eye)
@@ -577,7 +577,7 @@ Mat4x4_LookAtLH( T )(
     return m;
 }
 
-/*
+/**
  General form of the Projection Matrix
 
 		 uh = Cot( fov/2 ) == 1/Tan(fov/2)
@@ -649,7 +649,8 @@ struct Ray
     float m_maxT = float.max;
 }
 
-struct AABB {
+struct AABB
+{
     vec3  m_min = vec3( float.max, float.max, float.max );
     vec3  m_max = vec3( -float.max, -float.max, -float.max );
 }
