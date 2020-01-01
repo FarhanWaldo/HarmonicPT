@@ -2,6 +2,10 @@ import std.math : sin, cos, sqrt;
 import fwmath;
 
 
+/**
+    Sampling and PDF methods for basic shapes
+*/
+
 pure vec2
 ConcentricSampleDisk( in ref vec2 P )
 {
@@ -82,4 +86,76 @@ pure float
 UniformConePdf( float cosThetaMax )
 {
     return 1.0f / ( 2.0f * PI * ( 1.0f - cosThetaMax ) );
+}
+
+
+/*******************************
+    Samplers
+*/
+
+abstract class BaseSampler
+{
+    const ulong m_samplesPerPixel;
+    ulong       m_1DArrayOffset;
+    ulong       m_2DArrayOffset;
+
+    vec2        m_currentPixel;
+    ulong       m_currentPixelSampleIndex;
+
+    //  TODO:: D arrays track size... this is probably not necessary
+    //
+    ulong[]     m_1DSamplesArraySizes;
+    ulong[]     m_2DSamplesArraySizes;
+
+    float[][]   m_1DSamplesArray;
+    vec2[][]    m_2DSamplesArray;
+
+    /***
+        Methods
+    */
+    this( ulong samplesPerPixel )
+    {
+        m_samplesPerPixel = samplesPerPixel;
+    }
+
+    int RoundCount( int n )
+    {
+        return n;
+    }
+
+    float Get1D();
+    vec2  Get2D();
+
+    void Request1DArray( uint n )
+    {
+        m_1DSamplesArraySizes ~= n;
+    }
+
+    void Request2DArray( uint n )
+    {
+
+    }
+
+    BaseSampler* Clone( int seed );
+
+    const float[]* Get1DArray( int index );
+    const vec2[]*  Get2DArray( int index );
+
+    bool StartNextSample()
+    {
+        m_1DArrayOffset = 0;
+        m_2DArrayOffset = 0;
+
+        ++m_currentPixelSampleIndex;
+
+        return m_currentPixelSampleIndex < m_samplesPerPixel;
+    }
+
+    void StartPixel( vec2 pixelPos )
+    {
+        m_currentPixel              = pixelPos;
+        m_currentPixelSampleIndex   = 0;
+        m_1DArrayOffset             = 0;
+        m_2DArrayOffset             = 0;
+    }
 }

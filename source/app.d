@@ -10,6 +10,7 @@ import fwmath;
 import image;
 import camera;
 
+import std.range;
 
 void main( string[] args)
 {
@@ -17,28 +18,11 @@ void main( string[] args)
     GC.disable;
     writeln("hello world!");
 
-    uint imageWidth = 640;
-    uint imageHeight = 480;
+    uint imageWidth 	= 640;
+    uint imageHeight 	= 480;
 
-	vec3 axis_x = vec3( 1.0f, 0.0f, 0.0f );
-	Quatf rotation = CreateRotationQuat( vec3( 0.0f, 1.0f, 0.0f ), DegreesToRad( 90.0f ) );
-	vec3 newVec = RotateVec3( axis_x, rotation );
-	writeln( newVec );
-
-	Mat4x4 m = {};
-	Mat4x4 i = Mat4x4_Identity!(float)();
-	writeln( "m = ", m );
-	writeln( "i = ", i );
-
-
-	Mat4x4 translateMat = Mat4x4_Translation!(float)( vec3( 4.0f, 0.3f, -1.0f ) );
-	writeln( translateMat );
 	// Load the SDL 2 library. 
     DerelictSDL2.load();
-
-	writeln( "newVec before xform = ", newVec );
-	vec3 xformP = TransformPoint( translateMat, newVec );
-	writeln( "newVec after xform = ", xformP );
 
 	SDL_Window* p_sdlWindow = null;
 	if ( SDL_Init( SDL_INIT_VIDEO ) < 0 )
@@ -63,8 +47,6 @@ void main( string[] args)
 	{
 		writeln("[ERROR] Could not create window %s", SDL_GetError() );
 	}
-
-
 
     Camera renderCam;
     Camera_Init( renderCam,
@@ -92,9 +74,11 @@ void main( string[] args)
     pImageBufferData = &renderImage.m_pixelData[ 0 ];
 	pDisplayBufferData = &displayImage.m_pixelData[ 0 ];
 
-    for ( uint row = 0; row < imageHeight; ++row )
+    // for ( uint row = 0; row < imageHeight; ++row )
+	foreach( uint row; 0 .. imageHeight )
     {
-        for ( uint col = 0; col < imageWidth; ++col )
+        // for ( uint col = 0; col < imageWidth; ++col )
+		foreach( uint col; 0 .. imageWidth )
         {
             uint  pixelIndex = 3*( row * imageWidth + col);
  
@@ -117,9 +101,11 @@ void main( string[] args)
 
 	//	Create LDR display buffer from HDR render buffer
 	//
-	for ( uint row = 0u; row < imageHeight; ++row )
+	// for ( uint row = 0u; row < imageHeight; ++row )
+	foreach ( uint row; 0..imageHeight )
 	{
-		for ( uint col = 0u; col < imageWidth; ++col )
+		// for ( uint col = 0u; col < imageWidth; ++col )
+		foreach ( uint col; 0..imageWidth )
 		{
 			uint pixelIndex = 3 * ( row * imageWidth + col );
 
