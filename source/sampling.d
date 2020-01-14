@@ -129,17 +129,31 @@ abstract class BaseSampler
     void Request1DArray( uint n )
     {
         m_1DSamplesArraySizes ~= n;
+		m_1DSamplesArray ~= new float[ n * m_samplesPerPixel ];
     }
 
     void Request2DArray( uint n )
     {
-
+		m_2DSamplesArraySizes ~= n;
+		m_2DSamplesArray ~= new vec2[ n * m_samplesPerPixel ];
     }
 
     BaseSampler* Clone( int seed );
 
-    const float[]* Get1DArray( int index );
-    const vec2[]*  Get2DArray( int index );
+    // TODO:: Modify Get1DArray and Get2DArray to return slices...
+    float* Get1DArray( int index )
+    {
+        if ( m_1DArrayOffset == m_1DSamplesArraySizes.length ) { return null; }
+
+        return &m_1DSamplesArray[ m_1DArrayOffset++ ][ m_currentPixelSampleIndex * index ];
+    }
+    
+    vec2*  Get2DArray( int index )
+    {
+        if ( m_2DArrayOffset == m_2DSamplesArraySizes.length ) { return null; }
+
+        return &m_2DSamplesArray[ m_2DArrayOffset++ ][ m_currentPixelSampleIndex * index ];
+    }
 
     bool StartNextSample()
     {
@@ -159,3 +173,65 @@ abstract class BaseSampler
         m_2DArrayOffset             = 0;
     }
 }
+
+
+class PixelSampler : BaseSampler
+{
+	float[][] m_samples1D;
+	vec2[][]  m_samples2D;
+	uint      m_currentDimension1D   = 0;
+	uint      m_currentDimension2D   = 0;
+	uint      m_numSampledDimensions = 0;
+	RNG       m_rng;
+	
+	this( u64 samplesPerPixel, u32 nSampledDims, int seed )
+	{
+		super( samplesPerPixel );
+		m_numSampledDimensions = nSampledDims;
+		m_rng = RNG( seed );
+
+		foreach ( uint dim; 0..nSampledDims )
+		{
+			m_samples1D ~= new float[ samplesPerPixel ];
+			m_samples2D ~= new vec2[ samplesPerPixel ];
+		}
+	}
+
+	override float Get1D()
+	{
+		if ( m_currentDimension1D < m_samples1D.length )
+        {
+            return m_samples1D[ m_currentDimension1D++ ][ m_currentPixelSampleIndex ];
+		}
+		else
+        {
+            return m_rng.rand();
+		}
+	}
+
+    override vec2 Get2D()
+    {
+        if ( m_currentDimension2D < m_samples2D.length )
+        {
+            return m_samples2D[ m_currentDimension2D++ ][ m_currentPixelSampleIndex ];
+        }
+        else
+        {
+            return vec2( m_rng.rand(), m_rng.rand() );
+        }
+    }
+
+    override BaseSampler* Clone( int seed )
+    {
+        return null;
+    }
+
+    override bool StartNextSample()
+    {
+        m_currentDimension1D = 0;
+        m_currentDimension2D = 0;
+
+        return super.StartNextSample();
+    }
+}
+
