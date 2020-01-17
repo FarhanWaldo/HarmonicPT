@@ -140,19 +140,18 @@ abstract class BaseSampler
 
     BaseSampler* Clone( int seed );
 
-    // TODO:: Modify Get1DArray and Get2DArray to return slices...
-    float* Get1DArray( int index )
+    float[] Get1DArray( int index )
     {
         if ( m_1DArrayOffset == m_1DSamplesArraySizes.length ) { return null; }
 
-        return &m_1DSamplesArray[ m_1DArrayOffset++ ][ m_currentPixelSampleIndex * index ];
+        return m_1DSamplesArray[ m_1DArrayOffset++ ][ (m_currentPixelSampleIndex*index)..(m_currentPixelSampleIndex*(index+1)) ];
     }
     
-    vec2*  Get2DArray( int index )
+    vec2[] Get2DArray( int index )
     {
         if ( m_2DArrayOffset == m_2DSamplesArraySizes.length ) { return null; }
 
-        return &m_2DSamplesArray[ m_2DArrayOffset++ ][ m_currentPixelSampleIndex * index ];
+        return m_2DSamplesArray[ m_2DArrayOffset++ ][ (m_currentPixelSampleIndex*index)..(m_currentPixelSampleIndex*(index+1)) ];
     }
 
     bool StartNextSample()
