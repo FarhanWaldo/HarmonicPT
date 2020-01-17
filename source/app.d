@@ -52,7 +52,10 @@ void main( string[] args)
     Camera_Init( renderCam,
                  vec3( 0.0f, 0.0f, -1.0f ) /* eyePos */,
                  vec3( 0.0f, 1.0f, 0.0f )  /* up */,
-                 vec3( 0.0f, 0.0f, 0.0f ) /* lookAt */ );
+                 vec3( 0.0f, 0.0f, 0.0f ) /* lookAt */,
+                 float(imageWidth)/float(imageHeight),
+                 45.0f,
+                 0.1, 100000.0f );
 
 
     int tileSize = 64;

@@ -647,6 +647,13 @@ struct Ray
     vec3  m_origin;
     vec3  m_dir;   
     float m_maxT = float.max;
+
+    this( vec3 origin, vec3 direction, float maxRayLength = float.max )
+    {
+        m_origin = origin;
+        m_dir    = direction;
+        m_maxT   = maxRayLength;
+    }
 }
 
 struct AABB
