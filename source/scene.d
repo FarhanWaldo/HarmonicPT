@@ -2,6 +2,7 @@ import fwmath;
 import material;
 import light;
 import shape;
+import interactions;
 
 struct ScenePrimIntersection
 {
@@ -86,4 +87,49 @@ class EmissiveSurfacePrim : SurfacePrim
     final BaseAreaLight* GetAreaLight() { return m_areaLight; }
 
     override PrimType GetPrimType()  {  return PrimType.kEmissiveSurface; }
+}
+
+
+/**
+    Stores the primitives and lighting infornation.
+*/
+class Scene
+{
+    IAggregatePrim*     m_rootPrim;
+    ILight*[]           m_lights;
+}
+
+bool
+FindClosestInterection( Scene scene, in ref Ray ray, out SurfaceInteraction surfIntx )
+{
+    ScenePrimIntersection primIntx;
+    bool intersectionFound = scene.m_rootPrim.IntersectsRay( ray, primIntx );
+
+    if ( intersectionFound )
+    {
+        if ( is( typeof( primIntx.m_prim ) == SurfacePrim ) )
+        {
+            const BaseShape* shape = ( cast( SurfacePrim* )primIntx.m_prim ).GetShape();
+            if ( shape != null )
+            {
+                shape.GetShadingInfo(  primIntx.m_intRes, surfIntx );
+            }
+
+            surfIntx.m_prim         = primIntx.m_prim;
+            surfIntx.m_material     = primIntx.m_material;
+            surfIntx.m_wo           = -1.0f * ray.m_dir;
+        }
+        else
+        {
+            // TODO:: Medium intersection
+        }
+    }
+
+    return intersectionFound;
+}
+
+bool
+FindAnyIntersection( Scene scene, in ref Ray ray )
+{
+    return scene.m_rootPrim.AnyIntersection( ray );
 }

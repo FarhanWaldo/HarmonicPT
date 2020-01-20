@@ -1,5 +1,11 @@
 import std.math;
 
+//////////////////////////////////////////
+//
+//  Aliases
+//
+//////////////////////////////////////////
+
 alias ulong     u64;
 alias uint      u32;
 alias ushort    u16;
@@ -13,6 +19,27 @@ alias byte      i8;
 alias double    f64;
 alias float     f32;
 
+//
+// Vec type aliases
+//
+alias VecT!( float, 2 ) vec2f;
+alias VecT!( float, 3 ) vec3f;
+alias VecT!( float, 4 ) vec4f;
+
+alias VecT!( double, 2 ) vec2d;
+alias VecT!( double, 3 ) vec3d;
+alias VecT!( double, 4 ) vec4d;
+
+// Partial specialisations
+//
+alias Vec3T( T ) = VecT!( T, 3 );
+alias Vec4T( T ) = VecT!( T, 4 );
+
+//  Default vecX types are floating point!
+//
+alias vec2f vec2;
+alias vec3f vec3;
+alias vec4f vec4;
 
 //////////////////////////////////////////
 //
@@ -25,8 +52,10 @@ const float TAU 				= 6.28318530718f;
 const float PI_OVER_4   		= 0.78539816339f;
 
 const float INV_PI				= 0.31830988618f;
-const float INV_TAU				= 0.15915494309f;		
+const float INV_TAU				= 0.15915494309f;
 const float INV_PI2				= 0.10132118364f;
+
+const float EPSILON             = 1e-5f;
 
 // Converts degrees into radians
 pure T DegreesToRad( T )( in T degrees ) { return degrees*0.01745329251; }
@@ -79,23 +108,6 @@ struct RNG
 //
 //////////////////////////////////////////
 
-// alias VecT!( uint, 2 ) vec2ui;
-// alias VecT!( uint, 3 ) vec3ui;
-// alias VecT!( uint, 4 ) vec4ui;
-
-alias VecT!( float, 2 ) vec2f;
-alias VecT!( float, 3 ) vec3f;
-alias VecT!( float, 4 ) vec4f;
-
-alias VecT!( double, 2 ) vec2d;
-alias VecT!( double, 3 ) vec3d;
-alias VecT!( double, 4 ) vec4d;
-
-//  Default vecX types are floating point!
-//
-alias vec2f vec2;
-alias vec3f vec3;
-alias vec4f vec4;
 
 struct VecT( Type, int Dim ) //if (( Dim >= 2 ) && Dim ( <= 4 ))
 {
@@ -654,6 +666,28 @@ struct Ray
         m_dir    = direction;
         m_maxT   = maxRayLength;
     }
+}
+
+pure Ray
+CreateFiniteRaySegment( in ref vec3 start, in ref vec3 end )
+{
+    Ray newRay = void;
+
+    vec3 dir = v_normalise( end - start );
+
+    newRay.m_origin     = start;
+    newRay.m_dir        = dir;
+
+    foreach ( uint i; 0..3 )
+    {
+        if ( dir[i] != 0.0f )
+        {
+            newRay.m_maxT = ( end[i] - start[i] ) / dir[ i ];
+            break;
+        }
+    }
+
+    return newRay;
 }
 
 struct AABB

@@ -77,10 +77,8 @@ void main( string[] args)
     pImageBufferData = &renderImage.m_pixelData[ 0 ];
 	pDisplayBufferData = &displayImage.m_pixelData[ 0 ];
 
-    // for ( uint row = 0; row < imageHeight; ++row )
 	foreach( uint row; 0 .. imageHeight )
     {
-        // for ( uint col = 0; col < imageWidth; ++col )
 		foreach( uint col; 0 .. imageWidth )
         {
             uint  pixelIndex = 3*( row * imageWidth + col);
@@ -104,10 +102,8 @@ void main( string[] args)
 
 	//	Create LDR display buffer from HDR render buffer
 	//
-	// for ( uint row = 0u; row < imageHeight; ++row )
 	foreach ( uint row; 0..imageHeight )
 	{
-		// for ( uint col = 0u; col < imageWidth; ++col )
 		foreach ( uint col; 0..imageWidth )
 		{
 			uint pixelIndex = 3 * ( row * imageWidth + col );

@@ -51,6 +51,9 @@ abstract class BaseShape
     */
     pure const void Sample( in ref Interaction refPoint, in ref vec2 u, out Interaction newIntx );
 
+
+    // TODO:: Document
+    pure const void GetShadingInfo( in ref IntersectionResult intxRes, out SurfaceInteraction surfIntx );
 }
 
 class ShapeSphere : BaseShape
@@ -107,7 +110,7 @@ class ShapeSphere : BaseShape
         float a = v_dot( ray.m_dir, ray.m_dir );
         float b = v_dot( oc, ray.m_dir );
         float c = v_dot( oc, oc ) - m_sphere.m_radius * m_sphere.m_radius;
-        float discriminant = b*b - a*c; // TODO:: Use Kahn's formulae with FMA to increase precision here
+        float discriminant = b*b - 4.0f*a*c; // TODO:: Use Kahn's formulae with FMA to increase precision here
 
         if ( discriminant > 0.0f ) 
         {
@@ -142,5 +145,11 @@ class ShapeSphere : BaseShape
         }
 
         return intersects;
+    }
+
+    override pure const void
+    GetShadingInfo( in ref IntersectionResult intxRes, out SurfaceInteraction surfIntx )
+    {
+        // TODO::
     }
 }

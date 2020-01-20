@@ -59,7 +59,7 @@ SpawnRay(
     
     // Normalise the pixel coord using the window size
     //
-    vec2 NDCPixelCoord = vec2(
+    vec2 ndcPixelCoord = vec2(
         pixelCoord.x / windowSize.x,
         1.0f - pixelCoord.y / windowSize.y );
 
@@ -68,5 +68,5 @@ SpawnRay(
 
     ray = Ray(
         pCamera.m_eyePos,
-        v_normalise( LLC + NDCPixelCoord.x*horizontal + NDCPixelCoord.y*vertical - pCamera.m_eyePos ) );
+        v_normalise( LLC + ndcPixelCoord.x*horizontal + ndcPixelCoord.y*vertical - pCamera.m_eyePos ) );
 }
