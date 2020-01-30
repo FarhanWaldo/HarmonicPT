@@ -100,7 +100,7 @@ class Scene
 }
 
 bool
-FindClosestInterection( Scene scene, in ref Ray ray, out SurfaceInteraction surfIntx )
+FindClosestIntersection( Scene scene, in ref Ray ray, out SurfaceInteraction surfIntx )
 {
     ScenePrimIntersection primIntx;
     bool intersectionFound = scene.m_rootPrim.IntersectsRay( ray, primIntx );

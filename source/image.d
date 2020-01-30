@@ -1,6 +1,10 @@
 import std.algorithm;
+import memory;
 
 extern(C) int stbi_write_png(char *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
+
+// alias Image( T ) = ImageBuffer!T;
+alias Image_F32     = ImageBuffer!float;
 
 struct ImageBuffer( T )
 {
@@ -18,7 +22,8 @@ ImageBuffer_Init(T)(
     ImageBuffer!T* pImageBuffer,
     int          width,
     int          height,
-    int          componentsPerPixel )
+    int          componentsPerPixel,
+    IMemAlloc*   pMemAlloc )
 {
     pImageBuffer.m_imageWidth = width;
     pImageBuffer.m_imageHeight = height;
@@ -30,7 +35,13 @@ ImageBuffer_Init(T)(
 
     //  Allocate memory
     //
-    pImageBuffer.m_pixelData.length = numPixels * componentsPerPixel;
+    if ( pMemAlloc == null ) {
+        pImageBuffer.m_pixelData.length = numPixels * componentsPerPixel;
+    }
+    else {
+        pImageBuffer.m_pixelData = pMemAlloc.AllocArray!T( numPixels * componentsPerPixel );
+    }
+
 }
 
 void

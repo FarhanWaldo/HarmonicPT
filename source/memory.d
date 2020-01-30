@@ -17,7 +17,7 @@ abstract class BaseMemAlloc
     const pure u64 GetNumUnallocatedBytes() { return m_memCapacityBytes - m_memAllocatedBytes; }
 
     void    Reset();
-    void*   Allocate( u64 bytesRequested, u64 alignment = 16);
+    void[]   Allocate( u64 bytesRequested, u64 alignment );
 }
 
 class StackAlloc : BaseMemAlloc
@@ -48,7 +48,7 @@ class StackAlloc : BaseMemAlloc
         m_memAllocatedBytes = 0;
     }
 
-    override void*
+    override void[]
     Allocate( u64 bytesRequested, u64 alignment )
     {
         u64 alignedBytesSize = bytesRequested + ( alignment - 1 ); //AlignAllocSize( bytesRequested, alignment );
@@ -59,8 +59,16 @@ class StackAlloc : BaseMemAlloc
         m_offsetFromStart += alignedBytesSize;
         m_memAllocatedBytes += alignedBytesSize;
 
-        return AlignAddress( startAddress, alignment );
+        void* alignedAddress = AlignAddress( startAddress, alignment);
+
+        return alignedAddress[ 0 .. bytesRequested ];
     }
+}
+
+T[]
+AllocArray( T )( BaseMemAlloc* memAlloc, u64 numElements, u64 alignment= 16 )
+{
+    return cast( T[] )( memAlloc.Allocate( numElements * T.sizeof , 16 ) );
 }
 
 @nogc pure void*
@@ -85,9 +93,15 @@ CAlignedMalloc( u64 bytesRequested, u64 alignment )
     return &alignedAddress[ 1 ];
 }
 
+/**
+    Can only be used to free an aligned pointer created vy CAlignedMalloc
+*/
 void
 CAlignedFree( void* ptr )
 {
-    void* actualAddress = ptr - u64(1);
+    void* actualAddress = ptr - 1;
     free( actualAddress );
 }
+
+@nogc pure u64 MegaBytes( u64 numMegaBytes ) { return numMegaBytes*1000000; }
+@nogc pure u64 KiloBytes( u64 numKiloBytes ) { return numKiloBytes*1000; }

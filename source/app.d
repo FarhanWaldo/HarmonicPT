@@ -9,6 +9,7 @@ import derelict.sdl2.sdl;
 import fwmath;
 import image;
 import camera;
+import memory;
 
 import std.range;
 
@@ -25,14 +26,7 @@ void main( string[] args)
     DerelictSDL2.load();
 
 	SDL_Window* p_sdlWindow = null;
-	if ( SDL_Init( SDL_INIT_VIDEO ) < 0 )
-	{
-		writeln("[ERROR] Couldn't initialise SDL2");
-	}
-	else
-	{
-		writeln("Succesfully initialised SDL2");
-	}
+    assert( SDL_Init( SDL_INIT_VIDEO ) >= 0, "[ERROR] Couldn't SDL_Init() failed." );
 
 	p_sdlWindow = SDL_CreateWindow(
 		"D-Harmonic PT",
@@ -42,11 +36,7 @@ void main( string[] args)
 		imageHeight,
 		SDL_WINDOW_OPENGL
 	);
-
-	if ( p_sdlWindow == null )
-	{
-		writeln("[ERROR] Could not create window %s", SDL_GetError() );
-	}
+    assert( p_sdlWindow != null, "[ERROR] SDL_CreateWindow failed" );
 
     Camera renderCam;
     Camera_Init( renderCam,
@@ -62,17 +52,24 @@ void main( string[] args)
     float* pImageBufferData;
 	ubyte* pDisplayBufferData;
 
-	float whitepoint = 10.0f;
+	float whitepoint = 2.0f;
 	
+    // Create global memory allocator
+    //
+    ulong       stackSize = MegaBytes( 500 );
+    void*       rootMemAllocAddress = CAlignedMalloc( stackSize, 16 );
+    scope(exit) CAlignedFree( rootMemAllocAddress );
+    StackAlloc  rootMemAlloc = new StackAlloc( rootMemAllocAddress, stackSize );
+
 	//	Create an RGB (32 bits per channel) floating point render buffer
 	//
     ImageBuffer!float renderImage = ImageBuffer!float ();
-    ImageBuffer_Init( &renderImage, imageWidth, imageHeight, 3 /* RGB */ );
+    ImageBuffer_Init!float( &renderImage, imageWidth, imageHeight, 3 /* RGB */, cast(BaseMemAlloc*) (&rootMemAlloc) );
 
 	//	LDR (8 bits per channel) buffer for display
 	//	
 	ImageBuffer!ubyte displayImage = ImageBuffer!ubyte();
-	ImageBuffer_Init( &displayImage, imageWidth, imageHeight, 3 /* RGB */ );
+	ImageBuffer_Init( &displayImage, imageWidth, imageHeight, 3 /* RGB */, cast( BaseMemAlloc*) (&rootMemAlloc) );
 
     pImageBufferData = &renderImage.m_pixelData[ 0 ];
 	pDisplayBufferData = &displayImage.m_pixelData[ 0 ];
@@ -109,9 +106,9 @@ void main( string[] args)
 			uint pixelIndex = 3 * ( row * imageWidth + col );
 
 			// F_TODO:: sqrt approximates linear -> gamme space conversion
-			pDisplayBufferData[ pixelIndex ] 		= cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex ] / whitepoint ) ) * 256.0f );
-			pDisplayBufferData[ pixelIndex  + 1 ] 	= cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex + 1 ] / whitepoint ) ) * 256.0f );
-			pDisplayBufferData[ pixelIndex  + 2 ] 	= cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex + 2 ] / whitepoint ) ) * 256.0f );
+			pDisplayBufferData[ pixelIndex ] 		= cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex ] / whitepoint ) ) * 255.0f );
+			pDisplayBufferData[ pixelIndex  + 1 ] 	= cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex + 1 ] / whitepoint ) ) * 255.0f );
+			pDisplayBufferData[ pixelIndex  + 2 ] 	= cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex + 2 ] / whitepoint ) ) * 255.0f );
 		}
 	}
 
@@ -140,14 +137,7 @@ void main( string[] args)
                                     imageWidth * 3 /* bytes per row */,
                                     rmask, gmask, bmask, amask );
 
-	if ( renderSurface != null )
-	{
-		writeln("WE HAVE A VALID RENDER SURFACE");
-	}
-	else
-	{
-		writeln("[ERROR] Invalid render surface!");
-	}
+    assert( renderSurface != null, "[ERROR] SDL_CreateRGBSurfaceFrom() returned an invalid surface.");
 
     //The surface contained by the window
     SDL_Surface* gScreenSurface = null;
