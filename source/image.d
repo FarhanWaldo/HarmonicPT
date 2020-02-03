@@ -25,8 +25,8 @@ ImageBuffer_Init(T)(
     int          componentsPerPixel,
     IMemAlloc*   pMemAlloc )
 {
-    pImageBuffer.m_imageWidth = width;
-    pImageBuffer.m_imageHeight = height;
+    pImageBuffer.m_imageWidth   = width;
+    pImageBuffer.m_imageHeight  = height;
 
     pImageBuffer.m_componentsPerPixel = componentsPerPixel;
 
