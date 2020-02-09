@@ -3,6 +3,7 @@ import core.memory;
 import std.stdio;
 import std.algorithm;
 import std.math;
+import std.range;
 
 import derelict.sdl2.sdl;
 
@@ -10,8 +11,8 @@ import fwmath;
 import image;
 import camera;
 import memory;
-
-import std.range;
+import scene;
+import integrator;
 
 void main( string[] args)
 {
@@ -59,58 +60,27 @@ void main( string[] args)
     ulong       stackSize = MegaBytes( 500 );
     void*       rootMemAllocAddress = CAlignedMalloc( stackSize, 16 );
     scope(exit) CAlignedFree( rootMemAllocAddress );
-    StackAlloc  rootMemAlloc = new StackAlloc( rootMemAllocAddress, stackSize );
+    // StackAlloc  rootMemAlloc = new StackAlloc( rootMemAllocAddress, stackSize );
+    IMemAlloc  rootMemAlloc = new StackAlloc( rootMemAllocAddress, stackSize );
 
 	//	Create an RGB (32 bits per channel) floating point render buffer
 	//
-    ImageBuffer!float renderImage = ImageBuffer!float ();
-    ImageBuffer_Init!float( &renderImage, imageWidth, imageHeight, 3 /* RGB */, cast(BaseMemAlloc*) (&rootMemAlloc) );
+    auto renderImage = ImageBuffer!float ();
+    auto imageInfoAlloca = ImageBuffer!float.alloca_t( imageWidth, imageHeight, 3 );
+    ImageBuffer_Alloca( &renderImage, imageInfoAlloca, rootMemAlloc.Allocate( imageInfoAlloca.Size() ) );
 
 	//	LDR (8 bits per channel) buffer for display
 	//	
-	ImageBuffer!ubyte displayImage = ImageBuffer!ubyte();
-	ImageBuffer_Init( &displayImage, imageWidth, imageHeight, 3 /* RGB */, cast( BaseMemAlloc*) (&rootMemAlloc) );
+	auto displayImage = ImageBuffer!ubyte();
+    auto displayImageAlloca = ImageBuffer!ubyte.alloca_t( imageWidth, imageHeight, 3 );
+    ImageBuffer_Alloca( &displayImage, displayImageAlloca, rootMemAlloc.Allocate( displayImageAlloca.Size() ) );
 
     pImageBufferData = &renderImage.m_pixelData[ 0 ];
 	pDisplayBufferData = &displayImage.m_pixelData[ 0 ];
 
-	foreach( uint row; 0 .. imageHeight )
-    {
-		foreach( uint col; 0 .. imageWidth )
-        {
-            uint  pixelIndex = 3*( row * imageWidth + col);
- 
-            float r = 1.0f;
-            float g = 1.0f;
-            float b = 1.0f;
+    IIntegrator integrator = new HelloWorldIntegrator( renderCam, &renderImage );
 
-            if ( ((col/tileSize) % 2 == 0) ^ ((row/tileSize) % 2 == 0) )
-            {
-                r = 0.7f;
-                g = 0.6f;
-                b = 0.6f;
-            }
-
-            pImageBufferData[ pixelIndex     ] = r;
-            pImageBufferData[ pixelIndex + 1 ] = g;
-            pImageBufferData[ pixelIndex + 2 ] = b;
-        }
-    }
-
-	//	Create LDR display buffer from HDR render buffer
-	//
-	foreach ( uint row; 0..imageHeight )
-	{
-		foreach ( uint col; 0..imageWidth )
-		{
-			uint pixelIndex = 3 * ( row * imageWidth + col );
-
-			// F_TODO:: sqrt approximates linear -> gamme space conversion
-			pDisplayBufferData[ pixelIndex ] 		= cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex ] / whitepoint ) ) * 255.0f );
-			pDisplayBufferData[ pixelIndex  + 1 ] 	= cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex + 1 ] / whitepoint ) ) * 255.0f );
-			pDisplayBufferData[ pixelIndex  + 2 ] 	= cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex + 2 ] / whitepoint ) ) * 255.0f );
-		}
-	}
+    integrator.Init( cast( Scene* ) null, &rootMemAlloc );
 
     // Set up the pixel format color masks for RGB(A) byte arrays.
     // Only STBI_rgb (3) and STBI_rgb_alpha (4) are supported here!
@@ -145,13 +115,35 @@ void main( string[] args)
     //Get window surface
     gScreenSurface = SDL_GetWindowSurface( p_sdlWindow );
 
+version (none) {
+
+
+    integrator.RenderProgression( cast( Scene* ) null, &rootMemAlloc );
+
+	//	Create LDR display buffer from HDR render buffer
+	//
+	foreach ( uint row; 0..imageHeight )
+	{
+		foreach ( uint col; 0..imageWidth )
+		{
+			uint pixelIndex = 3 * ( row * imageWidth + col );
+
+			// F_TODO:: sqrt approximates linear -> gamme space conversion
+			pDisplayBufferData[ pixelIndex ] 		= cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex ] / whitepoint ) ) * 255.0f );
+			pDisplayBufferData[ pixelIndex  + 1 ] 	= cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex + 1 ] / whitepoint ) ) * 255.0f );
+			pDisplayBufferData[ pixelIndex  + 2 ] 	= cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex + 2 ] / whitepoint ) ) * 255.0f );
+		}
+	}
+    }
+
 	SDL_BlitSurface( renderSurface, null, gScreenSurface, null );
 	SDL_UpdateWindowSurface( p_sdlWindow );
-
 
 	SDL_Event e;
     bool quit = false;
     size_t numProgressions = 0u;
+    bool renderHasConverged = false;
+
     while ( !quit )
     {
         while ( SDL_PollEvent( &e ) )
@@ -160,6 +152,37 @@ void main( string[] args)
             {
                 quit = true;
             }
+
+            if ( !renderHasConverged )
+            {
+                writeln("Performing Render Progression!");
+
+                renderHasConverged = integrator.RenderProgression( cast( Scene* ) null, &rootMemAlloc );
+
+                //	Create LDR display buffer from HDR render buffer
+                //
+                foreach ( uint row; 0..imageHeight )
+                {
+                    foreach ( uint col; 0..imageWidth )
+                    {
+                        uint pixelIndex = 3 * ( row * imageWidth + col );
+
+                        // F_TODO:: sqrt approximates linear -> gamme space conversion
+                        pDisplayBufferData[ pixelIndex ] 		= cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex ] / whitepoint ) ) * 255.0f );
+                        pDisplayBufferData[ pixelIndex  + 1 ] 	= cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex + 1 ] / whitepoint ) ) * 255.0f );
+                        pDisplayBufferData[ pixelIndex  + 2 ] 	= cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex + 2 ] / whitepoint ) ) * 255.0f );
+                    }
+                }
+
+                SDL_BlitSurface( renderSurface, null, gScreenSurface, null );
+                SDL_UpdateWindowSurface( p_sdlWindow );
+
+                ++numProgressions;
+            }
+
+
+            // TODO:: Hook up keys to drive things like exposure values for tonemapping
+            //
             // if (e.type == SDL_KEYDOWN){
             //     quit = true;
             // }

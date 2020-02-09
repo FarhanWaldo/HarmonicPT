@@ -1,5 +1,4 @@
 import std.algorithm;
-import memory;
 
 extern(C) int stbi_write_png(char *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
 
@@ -10,6 +9,21 @@ struct ImageBuffer( T )
 {
     alias T ChannelType;
 
+    struct alloca_t
+    {
+        uint       width;
+        uint       height;
+        uint       componentsPerPixel;
+
+        ulong
+        GetSizeInBytes()
+        {
+            return width * height * componentsPerPixel * T.sizeof;
+        }
+
+        alias GetSizeInBytes Size;
+    }
+
     uint            m_imageWidth;
     uint            m_imageHeight;
     uint            m_componentsPerPixel;
@@ -18,28 +32,45 @@ struct ImageBuffer( T )
 };
 
 void
+ImageBuffer_Alloca( T, U ) (
+    ImageBuffer!T*              pImageBuffer,
+    ref ImageBuffer!T.alloca_t  alloca,
+    U                           memBuffer
+)
+{
+    auto typedMemBuffer = cast( T[] )( memBuffer );
+    ImageBuffer_Init!T(
+        pImageBuffer,
+        alloca.width,
+        alloca.height,
+        alloca.componentsPerPixel,
+        &typedMemBuffer
+    );
+}
+
+void
 ImageBuffer_Init(T)(
     ImageBuffer!T* pImageBuffer,
     int          width,
     int          height,
     int          componentsPerPixel,
-    IMemAlloc*   pMemAlloc )
+    T[]*         pixelDataBuffer )
 {
     pImageBuffer.m_imageWidth   = width;
     pImageBuffer.m_imageHeight  = height;
 
     pImageBuffer.m_componentsPerPixel = componentsPerPixel;
 
-    uint numPixels = width * height;
-    pImageBuffer.m_numPixels = numPixels;
+    uint numPixels              = width * height;
+    pImageBuffer.m_numPixels    = numPixels;
 
     //  Allocate memory
     //
-    if ( pMemAlloc == null ) {
+    if ( pixelDataBuffer == null ) {
         pImageBuffer.m_pixelData.length = numPixels * componentsPerPixel;
     }
     else {
-        pImageBuffer.m_pixelData = pMemAlloc.AllocArray!T( numPixels * componentsPerPixel );
+        pImageBuffer.m_pixelData = *pixelDataBuffer;
     }
 
 }

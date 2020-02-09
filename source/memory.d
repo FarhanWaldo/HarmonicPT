@@ -17,7 +17,7 @@ abstract class BaseMemAlloc
     const pure u64 GetNumUnallocatedBytes() { return m_memCapacityBytes - m_memAllocatedBytes; }
 
     void    Reset();
-    void[]   Allocate( u64 bytesRequested, u64 alignment );
+    void[]   Allocate( u64 bytesRequested, u64 alignment = 16);
 }
 
 class StackAlloc : BaseMemAlloc
@@ -49,7 +49,7 @@ class StackAlloc : BaseMemAlloc
     }
 
     override void[]
-    Allocate( u64 bytesRequested, u64 alignment )
+    Allocate( u64 bytesRequested, u64 alignment = 16 )
     {
         u64 alignedBytesSize = bytesRequested + ( alignment - 1 ); //AlignAllocSize( bytesRequested, alignment );
         void* startAddress = m_memBufferStart + m_offsetFromStart;

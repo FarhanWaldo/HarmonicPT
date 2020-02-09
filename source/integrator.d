@@ -7,7 +7,13 @@ import image;
 interface IIntegrator
 {
     void Init( in Scene* scene,  IMemAlloc* memArena );
-    void Render( in Scene* scene, IMemAlloc* memArena );
+
+    /**
+        Performs up to #numProgressions rendering progressions
+
+        Returns: returns whether rendering has converged
+    */
+    bool RenderProgression( in Scene* scene, IMemAlloc* memArena, int numProgressions = 1 );
 }
 
 class HelloWorldIntegrator : IIntegrator
@@ -27,8 +33,14 @@ class HelloWorldIntegrator : IIntegrator
         // writeln( "HelloWorldIntegrator::Init()!");
     }
 
-    override void
-    Render( in Scene* scene, IMemAlloc* memArena )
+    /**
+        This just draws a checkerboard to the render buffer, nothing fancy
+        Really only performs a single progression, regardless of what's requested
+
+        Returns: true, since render converges immediately
+    */
+    override bool
+    RenderProgression( in Scene* scene, IMemAlloc* memArena, int numProgressions = 1 )
     {
         // writeln( "HelloWorldIntegrator::Render()!");
         uint tileSize = 64;
@@ -58,5 +70,7 @@ class HelloWorldIntegrator : IIntegrator
                 imageBufferData[ pixelIndex + 2 ] = b;
             }
         }
+
+        return true; // converges after first progression
     }
 }

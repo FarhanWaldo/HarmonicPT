@@ -111,14 +111,8 @@ struct RNG
 
 struct VecT( Type, int Dim ) //if (( Dim >= 2 ) && Dim ( <= 4 ))
 {
-    static if ( Dim < 2 )
-    {
-        static assert(0, "Dim value is too low");
-    }
-    else static if ( Dim > 4 )
-    {
-        static assert(0, "Dim value is too high");
-    }
+    static assert ( Dim >= 2, "Dim value is too low" );
+    static assert ( Dim <= 4, "Dim value is too high");
 
     union
     {
