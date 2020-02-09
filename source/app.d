@@ -28,6 +28,7 @@ void main( string[] args)
 
 	SDL_Window* p_sdlWindow = null;
     assert( SDL_Init( SDL_INIT_VIDEO ) >= 0, "[ERROR] Couldn't SDL_Init() failed." );
+    scope(exit) SDL_Quit();
 
 	p_sdlWindow = SDL_CreateWindow(
 		"D-Harmonic PT",
@@ -38,6 +39,7 @@ void main( string[] args)
 		SDL_WINDOW_OPENGL
 	);
     assert( p_sdlWindow != null, "[ERROR] SDL_CreateWindow failed" );
+    scope(exit) SDL_DestroyWindow( p_sdlWindow );
 
     Camera renderCam;
     Camera_Init( renderCam,
@@ -115,34 +117,32 @@ void main( string[] args)
     //Get window surface
     gScreenSurface = SDL_GetWindowSurface( p_sdlWindow );
 
-version (none) {
-
-
-    integrator.RenderProgression( cast( Scene* ) null, &rootMemAlloc );
-
-	//	Create LDR display buffer from HDR render buffer
-	//
-	foreach ( uint row; 0..imageHeight )
-	{
-		foreach ( uint col; 0..imageWidth )
-		{
-			uint pixelIndex = 3 * ( row * imageWidth + col );
-
-			// F_TODO:: sqrt approximates linear -> gamme space conversion
-			pDisplayBufferData[ pixelIndex ] 		= cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex ] / whitepoint ) ) * 255.0f );
-			pDisplayBufferData[ pixelIndex  + 1 ] 	= cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex + 1 ] / whitepoint ) ) * 255.0f );
-			pDisplayBufferData[ pixelIndex  + 2 ] 	= cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex + 2 ] / whitepoint ) ) * 255.0f );
-		}
-	}
+    void updateSdlDisplayBuffer() {
+        SDL_BlitSurface( renderSurface, null, gScreenSurface, null );
+        SDL_UpdateWindowSurface( p_sdlWindow );
     }
 
-	SDL_BlitSurface( renderSurface, null, gScreenSurface, null );
-	SDL_UpdateWindowSurface( p_sdlWindow );
+	SDL_Event   e;
+    bool        quit = false;
+    size_t      numProgressions = 0u;
+    bool        renderHasConverged = false;
 
-	SDL_Event e;
-    bool quit = false;
-    size_t numProgressions = 0u;
-    bool renderHasConverged = false;
+    void tonemap( ) {
+        //	Create LDR display buffer from HDR render buffer
+        //
+        foreach ( uint row; 0..imageHeight )
+        {
+            foreach ( uint col; 0..imageWidth )
+            {
+                uint pixelIndex = 3 * ( row * imageWidth + col );
+
+                // F_TODO:: sqrt approximates linear -> gamme space conversion
+                pDisplayBufferData[ pixelIndex ] 		= cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex ] / whitepoint ) ) * 255.0f );
+                pDisplayBufferData[ pixelIndex  + 1 ] 	= cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex + 1 ] / whitepoint ) ) * 255.0f );
+                pDisplayBufferData[ pixelIndex  + 2 ] 	= cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex + 2 ] / whitepoint ) ) * 255.0f );
+            }
+        }
+    }
 
     while ( !quit )
     {
@@ -157,25 +157,11 @@ version (none) {
             {
                 writeln("Performing Render Progression!");
 
-                renderHasConverged = integrator.RenderProgression( cast( Scene* ) null, &rootMemAlloc );
+                renderHasConverged =
+                    integrator.RenderProgression( cast( Scene* ) null, &rootMemAlloc );
 
-                //	Create LDR display buffer from HDR render buffer
-                //
-                foreach ( uint row; 0..imageHeight )
-                {
-                    foreach ( uint col; 0..imageWidth )
-                    {
-                        uint pixelIndex = 3 * ( row * imageWidth + col );
-
-                        // F_TODO:: sqrt approximates linear -> gamme space conversion
-                        pDisplayBufferData[ pixelIndex ] 		= cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex ] / whitepoint ) ) * 255.0f );
-                        pDisplayBufferData[ pixelIndex  + 1 ] 	= cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex + 1 ] / whitepoint ) ) * 255.0f );
-                        pDisplayBufferData[ pixelIndex  + 2 ] 	= cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex + 2 ] / whitepoint ) ) * 255.0f );
-                    }
-                }
-
-                SDL_BlitSurface( renderSurface, null, gScreenSurface, null );
-                SDL_UpdateWindowSurface( p_sdlWindow );
+                tonemap();
+                updateSdlDisplayBuffer();
 
                 ++numProgressions;
             }
@@ -190,17 +176,8 @@ version (none) {
             //     quit = true;
             // }
         }
-
-
 	}
 
-    // Close and destroy the window
-    //
-    SDL_DestroyWindow( p_sdlWindow );
-
-    // Clean up
-    //
-    SDL_Quit();
 
     ImageBuffer_WriteToPng( &renderImage, cast(char*) "render.png" );
 }
