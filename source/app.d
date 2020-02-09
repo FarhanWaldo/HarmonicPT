@@ -17,11 +17,47 @@ import integrator;
 void main( string[] args)
 {
     // Disable the garbage collector
-    GC.disable;
-    writeln("hello world!");
+    // GC.disable;
 
     uint imageWidth 	= 640;
     uint imageHeight 	= 480;
+
+    int tileSize = 64;
+    float* pImageBufferData;
+	ubyte* pDisplayBufferData;
+
+	float whitepoint = 2.0f;
+	
+    // Create global memory allocator
+    //
+    ulong       stackSize = MegaBytes( 500 );
+    void*       rootMemAllocAddress = CAlignedMalloc( stackSize, 16 );
+    scope(exit) CAlignedFree( rootMemAllocAddress );
+    // StackAlloc  rootMemAlloc = new StackAlloc( rootMemAllocAddress, stackSize );
+    IMemAlloc  rootMemAlloc = new StackAlloc( rootMemAllocAddress, stackSize );
+
+    //
+    // Set up Render and Display bufferss
+    //
+
+	//	Create an RGB (32 bits per channel) floating point render buffer
+	//
+    auto renderImage = ImageBuffer!float ();
+    auto imageInfoAlloca = ImageBuffer!float.alloca_t( imageWidth, imageHeight, 3 );
+    ImageBuffer_Alloca( &renderImage, imageInfoAlloca, rootMemAlloc.Allocate( imageInfoAlloca.Size() ) );
+
+	//	LDR (8 bits per channel) buffer for display
+	//	
+	auto displayImage = ImageBuffer!ubyte();
+    auto displayImageAlloca = ImageBuffer!ubyte.alloca_t( imageWidth, imageHeight, 3 );
+    ImageBuffer_Alloca( &displayImage, displayImageAlloca, rootMemAlloc.Allocate( displayImageAlloca.Size() ) );
+
+    pImageBufferData = &renderImage.m_pixelData[ 0 ];
+	pDisplayBufferData = &displayImage.m_pixelData[ 0 ];
+
+    //
+    //  SDL2 Setup
+    //
 
 	// Load the SDL 2 library. 
     DerelictSDL2.load();
@@ -41,64 +77,21 @@ void main( string[] args)
     assert( p_sdlWindow != null, "[ERROR] SDL_CreateWindow failed" );
     scope(exit) SDL_DestroyWindow( p_sdlWindow );
 
-    Camera renderCam;
-    Camera_Init( renderCam,
-                 vec3( 0.0f, 0.0f, -1.0f ) /* eyePos */,
-                 vec3( 0.0f, 1.0f, 0.0f )  /* up */,
-                 vec3( 0.0f, 0.0f, 0.0f ) /* lookAt */,
-                 float(imageWidth)/float(imageHeight),
-                 45.0f,
-                 0.1, 100000.0f );
-
-
-    int tileSize = 64;
-    float* pImageBufferData;
-	ubyte* pDisplayBufferData;
-
-	float whitepoint = 2.0f;
-	
-    // Create global memory allocator
-    //
-    ulong       stackSize = MegaBytes( 500 );
-    void*       rootMemAllocAddress = CAlignedMalloc( stackSize, 16 );
-    scope(exit) CAlignedFree( rootMemAllocAddress );
-    // StackAlloc  rootMemAlloc = new StackAlloc( rootMemAllocAddress, stackSize );
-    IMemAlloc  rootMemAlloc = new StackAlloc( rootMemAllocAddress, stackSize );
-
-	//	Create an RGB (32 bits per channel) floating point render buffer
-	//
-    auto renderImage = ImageBuffer!float ();
-    auto imageInfoAlloca = ImageBuffer!float.alloca_t( imageWidth, imageHeight, 3 );
-    ImageBuffer_Alloca( &renderImage, imageInfoAlloca, rootMemAlloc.Allocate( imageInfoAlloca.Size() ) );
-
-	//	LDR (8 bits per channel) buffer for display
-	//	
-	auto displayImage = ImageBuffer!ubyte();
-    auto displayImageAlloca = ImageBuffer!ubyte.alloca_t( imageWidth, imageHeight, 3 );
-    ImageBuffer_Alloca( &displayImage, displayImageAlloca, rootMemAlloc.Allocate( displayImageAlloca.Size() ) );
-
-    pImageBufferData = &renderImage.m_pixelData[ 0 ];
-	pDisplayBufferData = &displayImage.m_pixelData[ 0 ];
-
-    IIntegrator integrator = new HelloWorldIntegrator( renderCam, &renderImage );
-
-    integrator.Init( cast( Scene* ) null, &rootMemAlloc );
-
     // Set up the pixel format color masks for RGB(A) byte arrays.
     // Only STBI_rgb (3) and STBI_rgb_alpha (4) are supported here!
     uint rmask, gmask, bmask, amask;
-// // #if SDL_BYTEORDER == SDL_BIG_ENDIAN
-//     int shift = (req_format == STBI_rgb) ? 8 : 0;
-//     rmask = 0xff000000 >> shift;
-//     gmask = 0x00ff0000 >> shift;
-//     bmask = 0x0000ff00 >> shift;
-//     amask = 0x000000ff >> shift;
-// #else // little endian, like x86
+    // // #if SDL_BYTEORDER == SDL_BIG_ENDIAN
+    //     int shift = (req_format == STBI_rgb) ? 8 : 0;
+    //     rmask = 0xff000000 >> shift;
+    //     gmask = 0x00ff0000 >> shift;
+    //     bmask = 0x0000ff00 >> shift;
+    //     amask = 0x000000ff >> shift;
+    // #else // little endian, like x86
     rmask = 0x000000ff;
     gmask = 0x0000ff00;
     bmask = 0x00ff0000;
     amask = 0; //(req_format == STBI_rgb) ? 0 : 0xff000000;
-// #endif
+    // #endif
 
     SDL_Surface* renderSurface = SDL_CreateRGBSurfaceFrom(
                                     // pImageBufferData,
@@ -113,14 +106,8 @@ void main( string[] args)
 
     //The surface contained by the window
     SDL_Surface* gScreenSurface = null;
-
     //Get window surface
     gScreenSurface = SDL_GetWindowSurface( p_sdlWindow );
-
-    void updateSdlDisplayBuffer() {
-        SDL_BlitSurface( renderSurface, null, gScreenSurface, null );
-        SDL_UpdateWindowSurface( p_sdlWindow );
-    }
 
 	SDL_Event   e;
     bool        quit = false;
@@ -144,6 +131,31 @@ void main( string[] args)
         }
     }
 
+    void updateSdlDisplayBuffer() {
+        SDL_BlitSurface( renderSurface, null, gScreenSurface, null );
+        SDL_UpdateWindowSurface( p_sdlWindow );
+    }
+
+
+    //
+    //  Scene Init
+    //
+
+    Camera renderCam;
+    Camera_Init( renderCam,
+                 vec3( 0.0f, 0.0f, -1.0f ) /* eyePos */,
+                 vec3( 0.0f, 1.0f, 0.0f )  /* up */,
+                 vec3( 0.0f, 0.0f, 0.0f ) /* lookAt */,
+                 float(imageWidth)/float(imageHeight),
+                 45.0f,
+                 0.1, 100000.0f );
+
+    IIntegrator integrator = new HelloWorldIntegrator( renderCam, &renderImage );
+    integrator.Init( cast( Scene* ) null, &rootMemAlloc );
+
+    //
+    //  Event/Render loop
+    //
     while ( !quit )
     {
         while ( SDL_PollEvent( &e ) )
@@ -162,8 +174,8 @@ void main( string[] args)
 
                 tonemap();
                 updateSdlDisplayBuffer();
-
                 ++numProgressions;
+
             }
 
 
