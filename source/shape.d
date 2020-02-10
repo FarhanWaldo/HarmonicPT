@@ -69,8 +69,8 @@ class ShapeSphere : BaseShape
     ComputeBBox()
     {
         return AABB( 
-            m_sphere.m_centre - vec3( m_sphere.m_radius ) , // min
-            m_sphere.m_centre + vec3( m_sphere.m_radius ) // max
+            m_sphere.m_centre - vec3( m_sphere.m_radius ) ,     // min
+            m_sphere.m_centre + vec3( m_sphere.m_radius )       // max
         );
     }
 

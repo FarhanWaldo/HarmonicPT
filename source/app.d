@@ -13,6 +13,8 @@ import camera;
 import memory;
 import scene;
 import integrator;
+import shape;
+import material;
 
 void main( string[] args)
 {
@@ -114,7 +116,7 @@ void main( string[] args)
     size_t      numProgressions = 0u;
     bool        renderHasConverged = false;
 
-    void tonemap( ) {
+    void tonemap() {
         //	Create LDR display buffer from HDR render buffer
         //
         foreach ( uint row; 0..imageHeight )
@@ -124,6 +126,7 @@ void main( string[] args)
                 uint pixelIndex = 3 * ( row * imageWidth + col );
 
                 // F_TODO:: sqrt approximates linear -> gamme space conversion
+                //
                 pDisplayBufferData[ pixelIndex ] 		= cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex ] / whitepoint ) ) * 255.0f );
                 pDisplayBufferData[ pixelIndex  + 1 ] 	= cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex + 1 ] / whitepoint ) ) * 255.0f );
                 pDisplayBufferData[ pixelIndex  + 2 ] 	= cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex + 2 ] / whitepoint ) ) * 255.0f );
@@ -141,6 +144,15 @@ void main( string[] args)
     //  Scene Init
     //
 
+    scope ShapeSphere shpSphere = new ShapeSphere( vec3(0.0f), 3.0f );
+    scope SurfacePrim surfPrim  = new SurfacePrim( cast( BaseShape* ) &shpSphere, cast( IMaterial* ) null ); 
+
+    scope IPrimitive[] prims;
+    prims ~= surfPrim;
+
+    scope PrimList primList     = new PrimList( prims );
+    Scene scene                 = Scene( primList, [] );
+
     Camera renderCam;
     Camera_Init( renderCam,
                  vec3( 0.0f, 0.0f, -1.0f ) /* eyePos */,
@@ -151,7 +163,7 @@ void main( string[] args)
                  0.1, 100000.0f );
 
     IIntegrator integrator = new HelloWorldIntegrator( renderCam, &renderImage );
-    integrator.Init( cast( Scene* ) null, &rootMemAlloc );
+    integrator.Init( &scene, &rootMemAlloc );
 
     //
     //  Event/Render loop
@@ -170,10 +182,11 @@ void main( string[] args)
                 writeln("Performing Render Progression!");
 
                 renderHasConverged =
-                    integrator.RenderProgression( cast( Scene* ) null, &rootMemAlloc );
+                    integrator.RenderProgression( &scene, &rootMemAlloc );
 
                 tonemap();
                 updateSdlDisplayBuffer();
+
                 ++numProgressions;
 
             }

@@ -16,6 +16,7 @@ enum PrimType
     kNone,
     kSurface,
     kEmissiveSurface,
+    kAggregate
 }
 
 interface IPrimitive
@@ -46,6 +47,54 @@ interface IAggregatePrim : IPrimitive
 }
 
 /**
+    A flat array of primitives. No acceleration behind this acceleration structure...
+    a brute force linear search
+*/
+class PrimList : IAggregatePrim
+{
+    IPrimitive[]       m_prims;
+
+    // TODO:: Is this even necessary with runtime type info?
+    override PrimType   GetPrimType() { return PrimType.kAggregate; }
+    override AABB       ComputeBBox() { return AABB(); }
+    override IMaterial* GetMaterial() { return null; }
+
+    override bool
+    IntersectsRay( in ref Ray ray, out ScenePrimIntersection scenePrimIntx )
+    {
+        bool intersectionOccurred = false;
+
+        foreach ( prim; m_prims )
+        {
+            intersectionOccurred |= prim.IntersectsRay( ray, scenePrimIntx );
+        }
+
+        return intersectionOccurred;
+    }
+
+    override bool
+    AnyIntersection( in ref Ray ray )
+    {
+        ScenePrimIntersection primIntx;
+
+        foreach ( prim; m_prims )
+        {
+            if ( prim.IntersectsRay( ray, primIntx ) )
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    this( IPrimitive[] prims )
+    {
+        m_prims = prims;
+    }
+}
+
+/**
     Represents any surface boundary in the world, and can have a material attached.
     The material will describe the scattering properties of the surface represented by the prim.
 
@@ -53,17 +102,17 @@ interface IAggregatePrim : IPrimitive
 */
 class SurfacePrim : IPrimitive
 {
-    BaseShape*      m_shape;
-    IMaterial*      m_material;
+    BaseShape*  m_shape;
+    IMaterial*  m_material;
 
-    PrimType  GetPrimType() { return PrimType.kSurface; }
-    AABB ComputeBBox() { return m_shape.ComputeBBox(); }
-    IMaterial* GetMaterial() { return m_material; }
+    PrimType    GetPrimType() { return PrimType.kSurface; }
+    AABB        ComputeBBox() { return m_shape.ComputeBBox(); }
+    IMaterial*  GetMaterial() { return m_material; }
 
-    BaseShape* GetShape() { return m_shape; }
+    BaseShape*  GetShape() { return m_shape; }
 
-
-    bool IntersectsRay( in ref Ray ray, out ScenePrimIntersection primInt )
+    override bool
+    IntersectsRay( in ref Ray ray, out ScenePrimIntersection primInt )
     {
         if ( m_shape.IntersectsRay( ray, primInt.m_intRes ) )
         {
@@ -75,6 +124,12 @@ class SurfacePrim : IPrimitive
 
         return false;
     }
+
+    this( BaseShape* shape, IMaterial* material )
+    {
+        m_shape = shape;
+        m_material = material;
+    }
 }
 
 /**
@@ -82,20 +137,25 @@ class SurfacePrim : IPrimitive
 */
 class EmissiveSurfacePrim : SurfacePrim
 {
-    BaseAreaLight* m_areaLight;
+    BaseAreaLight*          m_areaLight;
 
-    final BaseAreaLight* GetAreaLight() { return m_areaLight; }
+    final BaseAreaLight*    GetAreaLight() { return m_areaLight; }
+    override PrimType       GetPrimType()  {  return PrimType.kEmissiveSurface; }
 
-    override PrimType GetPrimType()  {  return PrimType.kEmissiveSurface; }
+    this( BaseShape* shape, IMaterial* material, BaseAreaLight* areaLight )
+    {
+        super( shape, material );
+        m_areaLight = areaLight;
+    }
 }
 
 
 /**
     Stores the primitives and lighting infornation.
 */
-class Scene
+struct Scene
 {
-    IAggregatePrim*     m_rootPrim;
+    IAggregatePrim      m_rootPrim;
     ILight*[]           m_lights;
 }
 
