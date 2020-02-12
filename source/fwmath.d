@@ -72,6 +72,13 @@ pure T Clamp( T )( T val, T min, T max ) {
     
     return val;
 }
+unittest
+{
+    static assert( Clamp( 0.5, 0.0, 1.0 ) == 0.5 );
+    static assert( Clamp( -0.1, 0.0, 0.1 ) == 0.0 );
+    static assert( Clamp( 0.21, 0.0, 0.2 ) == 0.2 );
+    static assert( Clamp( 1e-5, 0.0, 2e-5) == 1e-5 );
+}
 
 pure float
 frand( int* seed )
@@ -185,7 +192,7 @@ struct VecT( Type, int Dim ) //if (( Dim >= 2 ) && Dim ( <= 4 ))
         static if ( dim == 2 ) return sqrt( x*x + y*y );
         else static if ( dim == 3 ) return sqrt( x*x + y*y + z*z );
         else static if ( dim == 4 ) return sqrt( x*x + y*y + z*z + w*w );
-        else static assert(0, "Too many dimensions!");
+        else static assert( (dim >= 2 ) && ( dim <= 4 ), "Too many dimensions!");
     }
 
     void
@@ -200,7 +207,7 @@ struct VecT( Type, int Dim ) //if (( Dim >= 2 ) && Dim ( <= 4 ))
         static if ( Dim == 2 ) return mixin( "VecT( x"~op~"rhs.x, y"~op~"rhs.y)" );
         else static if ( Dim == 3 ) return mixin( "VecT( x"~op~"rhs.x, y"~op~"rhs.y, z"~op~"rhs.z)" );
         else static if ( Dim == 4 ) return mixin( "VecT( x"~op~"rhs.x, y"~op~"rhs.y, z"~op~"rhs.z, w"~op~"rhs.w)" );
-        else static assert( 0, "Not implemented");
+        else static assert( (dim >= 2 ) && ( dim <= 4 ), "Not implemented");
     }
 
     pure const VecT
@@ -275,6 +282,32 @@ v_cross( T ) ( in VecT!( T, 3 ) a, in VecT!( T , 3 ) b )
             b.x*a.z - a.x*b.z,
             a.x*b.y - b.x*a.y  );
 }
+unittest
+{
+    const vec3 zero = vec3( 0.0 );
+    const vec3 x = vec3( 1.0, 0.0, 0.0 );
+    const vec3 y = vec3( 0.0, 1.0, 0.0 );
+    const vec3 z = vec3( 0.0, 0.0, 1.0 );
+    const vec3 neg_z = vec3( 0.0, 0.0, -1.0 );
+
+
+    // Verify properties of the operator
+    assert( v_cross( x, y ) == z, "Verify that X x Y = Z, with respect to the cross product of the cartesian basis vectors" );
+    assert( v_cross( y, x ) == neg_z, "Verify anti-commutivity of cross product operator" );
+
+    assert( v_cross( x, x ) == zero, "Verify that A x A = 0" );
+
+    assert( v_cross( y, z ) == x );
+    assert( v_cross( z, x ) == y );
+
+
+    const vec3 a = vec3( 0.15124, 123.1, 14.12 );
+    const vec3 b = vec3( 5.6, -4.3, 14.1 );
+    const vec3 c = v_cross( a, b );
+
+    assert( v_dot( a, c ) == 0.0, "Verify that dot( a, c ) == 0, if c = cross( a, b )");
+    assert( v_dot( b, c ) == 0.0, "Verify that dot( b, c ) == 0, if c = cross( a, b )");
+}
 
 pure vec3
 v_normalise( in vec3 v )
@@ -288,7 +321,7 @@ v_dot( T, int Dim ) ( in ref VecT!( T, Dim ) a, in ref VecT!( T, Dim ) b )
 {
     static if ( Dim == 2 ) return ( a.x*b.x + a.y*b.y );
     else static if ( Dim == 3 ) return ( a.x*b.x + a.y*b.y + a.z*b.z );
-    else static assert( 0, "Invalid dimension for vector");
+    else static assert( ( Dim <= 2 ) && ( Dim >= 3 ), "Invalid dimension for vector");
 }
 
 pure VecT!( T, Dim )
