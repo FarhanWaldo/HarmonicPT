@@ -41,7 +41,7 @@ Camera_Init(
 
 void
 SpawnRay(
-    Camera* pCamera,
+    in ref Camera pCamera,
     in ref vec2 pixelCoord,
     in ref vec2 windowSize,
     out Ray ray )

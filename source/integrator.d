@@ -2,6 +2,8 @@ import scene;
 import camera;
 import memory;
 import image;
+import sampling;
+import fwmath;
 
 
 interface IIntegrator
@@ -73,4 +75,85 @@ class HelloWorldIntegrator : IIntegrator
 
         return true; // converges after first progression
     }
+}
+
+import std.stdio;
+class SamplerIntegrator : IIntegrator
+{
+    BaseSampler*    m_sampler;
+    Camera          m_camera;
+    Image_F32*      m_renderBuffer;
+    const uint      m_maxBounces;
+
+    this( BaseSampler* sampler, Camera cam, Image_F32* renderBuffer, uint maxBounces = 6 )
+    {
+        m_sampler       = sampler;
+        m_camera        = cam;
+        m_renderBuffer  = renderBuffer;
+        m_maxBounces    = maxBounces; 
+    }
+
+    override void
+    Init( in Scene* scene, IMemAlloc* memArena )
+    {
+        // writeln( "HelloWorldIntegrator::Init()!");
+    }
+
+    override bool
+    RenderProgression( in Scene* scene, IMemAlloc* memArena, int numProgressions = 1 )
+    {
+        const uint imageWidth = m_renderBuffer.m_imageWidth;
+        const uint imageHeight = m_renderBuffer.m_imageHeight;
+        const vec2 cameraDims  = vec2( cast(float) imageWidth, cast(float) imageHeight );
+
+        float[] renderBuffer = m_renderBuffer.m_pixelData;
+        // vec3[] pixelIrradianceBuffer = m_renderBuffer.m_pixelData;
+
+        foreach ( uint j; 0 .. imageHeight )
+        {
+            foreach( uint i; 0 .. imageWidth )
+            {
+                // // thread id stuff
+                
+                vec3 pixelColour = vec3(0.0); // = vec3( 0.0, 1.0, 0.0 );
+                // // int  nSamples;
+
+                foreach ( progression; 0 .. numProgressions )
+                {
+                    const vec2 pixelPos = vec2( cast(float) imageWidth, cast(float) imageHeight );
+                    const vec2 jitteredPos = pixelPos + m_sampler.Get2D();
+
+                    Ray cameraRay;
+                    m_camera.SpawnRay( jitteredPos, cameraDims, cameraRay );
+
+                    pixelColour += Irradiance( cameraRay, scene, m_sampler, memArena );
+                }
+
+                pixelColour *= (1.0/( cast(float) numProgressions ) );
+
+                const float ir = pixelColour.r;
+                const float ig = pixelColour.g;
+                const float ib = pixelColour.b;
+
+                ulong baseIndex = (( j*imageWidth ) + i ) * 3;
+                renderBuffer[ baseIndex ]       += ir;
+                renderBuffer[ baseIndex + 1 ]   += ig;
+                renderBuffer[ baseIndex + 2 ]   += ib;
+            }
+        }
+
+        return true;
+    }
+
+    vec3
+    Irradiance(
+        in ref Ray      ray,
+        in Scene*       scene,
+        BaseSampler*    sampler,
+        IMemAlloc*      memArena,
+        int             depth = 0 )
+    {
+        return vec3( 0.0, 0.0, 1.0 ); // Output just red
+    }
+
 }

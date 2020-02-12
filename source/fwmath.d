@@ -235,6 +235,34 @@ struct VecT( Type, int Dim ) //if (( Dim >= 2 ) && Dim ( <= 4 ))
 
         return v;
     }
+
+    pure void
+    opOpAssign( string op )( VecT rhs )
+    {
+        static assert(  (op == "+") ||
+                        (op == "*") ||
+                        (op == "-"),
+                        "Op " ~op~ "= not a supported operator" );
+
+        mixin( "data[0] " ~ op ~ "= rhs[0]; ");
+        mixin( "data[1] " ~ op ~ "= rhs[1]; ");
+        static if ( Dim >= 3 ) mixin( "data[2] " ~ op ~ "= rhs[2]; ");
+        static if ( Dim >= 4 ) mixin( "data[3] " ~ op ~ "= rhs[3];");
+    }
+
+    pure void
+    opOpAssign( string op )( Type value )
+    {
+        static assert(  (op == "+") ||
+                        (op == "*") ||
+                        (op == "-"),
+                        "Op " ~op~ "= not a supported operator" );
+
+        mixin( "data[0] " ~ op ~ "= value; ");
+        mixin( "data[1] " ~ op ~ "= value; ");
+        static if ( Dim >= 3 ) mixin( "data[2] " ~ op ~ "= value; ");
+        static if ( Dim >= 4 ) mixin( "data[3] " ~ op ~ "= value;");
+    }
 }
 
 alias QuatT!( float ) Quatf;

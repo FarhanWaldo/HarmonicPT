@@ -14,6 +14,7 @@ import memory;
 import scene;
 import integrator;
 import shape;
+import sampling;
 import material;
 
 void main( string[] args)
@@ -162,7 +163,9 @@ void main( string[] args)
                  45.0f,
                  0.1, 100000.0f );
 
-    IIntegrator integrator = new HelloWorldIntegrator( renderCam, &renderImage );
+    // IIntegrator integrator = new HelloWorldIntegrator( renderCam, &renderImage );
+    BaseSampler sampler = new PixelSampler( 32, 0, 4123123 );
+    IIntegrator integrator = new SamplerIntegrator( &sampler, renderCam, &renderImage );
     integrator.Init( &scene, &rootMemAlloc );
 
     //
