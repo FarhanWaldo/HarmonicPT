@@ -4,6 +4,7 @@ import memory;
 import image;
 import sampling;
 import fwmath;
+import interactions;
 
 
 interface IIntegrator
@@ -15,7 +16,7 @@ interface IIntegrator
 
         Returns: returns whether rendering has converged
     */
-    bool RenderProgression( in Scene* scene, IMemAlloc* memArena, int numProgressions = 1 );
+    bool RenderProgression( Scene* scene, IMemAlloc* memArena, int numProgressions = 1 );
 }
 
 class HelloWorldIntegrator : IIntegrator
@@ -42,7 +43,7 @@ class HelloWorldIntegrator : IIntegrator
         Returns: true, since render converges immediately
     */
     override bool
-    RenderProgression( in Scene* scene, IMemAlloc* memArena, int numProgressions = 1 )
+    RenderProgression( Scene* scene, IMemAlloc* memArena, int numProgressions = 1 )
     {
         // writeln( "HelloWorldIntegrator::Render()!");
         uint tileSize = 64;
@@ -77,13 +78,12 @@ class HelloWorldIntegrator : IIntegrator
     }
 }
 
-import std.stdio;
 class SamplerIntegrator : IIntegrator
 {
     BaseSampler*    m_sampler;
-    Camera          m_camera;
-    Image_F32*      m_renderBuffer;
-    const uint      m_maxBounces;
+	Camera          m_camera;
+	Image_F32*      m_renderBuffer;
+	const uint      m_maxBounces;
 
     this( BaseSampler* sampler, Camera cam, Image_F32* renderBuffer, uint maxBounces = 6 )
     {
@@ -100,15 +100,16 @@ class SamplerIntegrator : IIntegrator
     }
 
     override bool
-    RenderProgression( in Scene* scene, IMemAlloc* memArena, int numProgressions = 1 )
+    RenderProgression( Scene* scene, IMemAlloc* memArena, int numProgressions = 1 )
     {
         const uint imageWidth = m_renderBuffer.m_imageWidth;
         const uint imageHeight = m_renderBuffer.m_imageHeight;
         const vec2 cameraDims  = vec2( cast(float) imageWidth, cast(float) imageHeight );
 
         float[] renderBuffer = m_renderBuffer.m_pixelData;
-        // vec3[] pixelIrradianceBuffer = m_renderBuffer.m_pixelData;
 
+        // TODO:: Have better pixel filtering
+        //
         foreach ( uint j; 0 .. imageHeight )
         {
             foreach( uint i; 0 .. imageWidth )
@@ -120,7 +121,8 @@ class SamplerIntegrator : IIntegrator
 
                 foreach ( progression; 0 .. numProgressions )
                 {
-                    const vec2 pixelPos = vec2( cast(float) imageWidth, cast(float) imageHeight );
+                    // const vec2 pixelPos = vec2( cast(float) imageWidth, cast(float) imageHeight );
+                    const vec2 pixelPos = vec2( cast(float) i, cast(float) j );
                     const vec2 jitteredPos = pixelPos + m_sampler.Get2D();
 
                     Ray cameraRay;
@@ -148,12 +150,47 @@ class SamplerIntegrator : IIntegrator
     vec3
     Irradiance(
         in ref Ray      ray,
-        in Scene*       scene,
+        Scene*          scene,
         BaseSampler*    sampler,
         IMemAlloc*      memArena,
         int             depth = 0 )
     {
         return vec3( 0.0, 0.0, 1.0 ); // Output just red
+    }
+
+}
+
+class WhittedIntegrator : SamplerIntegrator
+{
+    this( BaseSampler* m_sampler, Camera cam, Image_F32* renderBuffer, uint maxBounces = 6 )
+    {
+        super( m_sampler, cam, renderBuffer, maxBounces );
+    }
+
+    override vec3
+    Irradiance(
+        in ref Ray      ray,
+        Scene*          scene,
+        BaseSampler*    sampler,
+        IMemAlloc*      memArena,
+        int             depth = 0 )
+    {
+        vec3                radiance = vec3( 0.0 );
+        SurfaceInteraction  surfIntx;
+
+        if ( scene.FindClosestIntersection(ray, surfIntx ) )
+        // if ( scene.FindAnyIntersection( ray ) )
+        {
+            radiance = vec3( 1.0 );
+        }
+		else {
+
+        radiance = 0.5*v_normalise( ray.m_dir ) + vec3( 0.5 );
+
+		}
+
+        return radiance;
+
     }
 
 }
