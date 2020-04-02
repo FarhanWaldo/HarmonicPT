@@ -17,7 +17,7 @@ struct Camera
 
 pure void
 Camera_Init(
-    out  Camera camera,
+    ref  Camera camera,
     vec3 eyePos,
     vec3 up,
     vec3 lookAt,
@@ -30,8 +30,8 @@ Camera_Init(
 
     camera.m_eyePos         = eyePos;
     camera.m_lookDirection  = lookDir;
-    camera.m_up             = up;
-    camera.m_right          = v_cross( up, lookDir );
+    camera.m_up             = v_normalise( up );
+    camera.m_right          = v_normalise( v_cross( up, lookDir ) );
 
     camera.m_aspectRatio    = aspectRatio;
     camera.m_vertFoV        = vertFoV;
@@ -53,15 +53,16 @@ SpawnRay(
 
     // Lower-Left Corner
     vec3 LLC =     pCamera.m_eyePos
-                -  halfWidth * near * pCamera.m_right
-                -  halfHeight * near * pCamera.m_up
-                +  near * pCamera.m_lookDirection;
+                +  ( near * pCamera.m_lookDirection)
+		        -  ( halfWidth * near * pCamera.m_right )
+                -  ( halfHeight * near * pCamera.m_up )
+				;
     
     // Normalise the pixel coord using the window size
     //
     vec2 ndcPixelCoord = vec2(
         pixelCoord.x / windowSize.x,
-        1.0f - pixelCoord.y / windowSize.y );
+        1.0f - ( pixelCoord.y / windowSize.y ) );
 
     vec3 horizontal = 2.0f * halfWidth * near * pCamera.m_right;
     vec3 vertical   = 2.0f * halfHeight * near * pCamera.m_up;
