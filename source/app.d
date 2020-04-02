@@ -145,7 +145,7 @@ void main( string[] args)
     //  Scene Init
     //
 
-    scope ShapeSphere shpSphere = new ShapeSphere( vec3(0.0f), 3.0f );
+    scope ShapeSphere shpSphere = new ShapeSphere( vec3(0.0f), 2.0f );
     scope SurfacePrim surfPrim  = new SurfacePrim( cast( BaseShape* ) &shpSphere, cast( IMaterial* ) null ); 
 
     scope IPrimitive[] prims;
@@ -156,16 +156,17 @@ void main( string[] args)
 
     Camera renderCam;
     Camera_Init( renderCam,
-                 vec3( 0.0f, 0.0f, -1.0f ) /* eyePos */,
+                 vec3( 0.0f, 0.0f, -5.0f ) /* eyePos */,
                  vec3( 0.0f, 1.0f, 0.0f )  /* up */,
                  vec3( 0.0f, 0.0f, 0.0f ) /* lookAt */,
                  float(imageWidth)/float(imageHeight),
                  45.0f,
-                 0.1, 100000.0f );
+                 0.1, 10000.0f );
 
     // IIntegrator integrator = new HelloWorldIntegrator( renderCam, &renderImage );
-    BaseSampler sampler = new PixelSampler( 32, 0, 4123123 );
-    IIntegrator integrator = new SamplerIntegrator( &sampler, renderCam, &renderImage );
+    BaseSampler sampler = new PixelSampler( 32, 0, 4123123 /* random seed */ );
+    // IIntegrator integrator = new SamplerIntegrator( &sampler, renderCam, &renderImage );
+    IIntegrator integrator = new WhittedIntegrator( &sampler, renderCam, &renderImage );
     integrator.Init( &scene, &rootMemAlloc );
 
     //
@@ -182,7 +183,7 @@ void main( string[] args)
 
             if ( !renderHasConverged )
             {
-                writeln("Performing Render Progression!");
+                writeln("Performing Render Progression # ", numProgressions, "" );
 
                 renderHasConverged =
                     integrator.RenderProgression( &scene, &rootMemAlloc );
