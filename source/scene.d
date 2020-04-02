@@ -69,6 +69,7 @@ class PrimList : IAggregatePrim
             intersectionOccurred |= prim.IntersectsRay( ray, scenePrimIntx );
         }
 
+
         return intersectionOccurred;
     }
 
@@ -91,6 +92,12 @@ class PrimList : IAggregatePrim
     this( IPrimitive[] prims )
     {
         m_prims = prims;
+
+		// foreach( prim; prims )
+	    // {
+		//     import std.stdio;
+		// 	writeln( *((cast( SurfacePrim ) prim).m_shape) );
+		// }
     }
 }
 
@@ -140,7 +147,7 @@ class EmissiveSurfacePrim : SurfacePrim
     BaseAreaLight*          m_areaLight;
 
     final BaseAreaLight*    GetAreaLight() { return m_areaLight; }
-    override PrimType       GetPrimType()  {  return PrimType.kEmissiveSurface; }
+    override PrimType       GetPrimType()  { return PrimType.kEmissiveSurface; }
 
     this( BaseShape* shape, IMaterial* material, BaseAreaLight* areaLight )
     {
@@ -160,7 +167,7 @@ struct Scene
 }
 
 bool
-FindClosestIntersection( Scene scene, in ref Ray ray, out SurfaceInteraction surfIntx )
+FindClosestIntersection( Scene* scene, in ref Ray ray, out SurfaceInteraction surfIntx )
 {
     ScenePrimIntersection primIntx;
     bool intersectionFound = scene.m_rootPrim.IntersectsRay( ray, primIntx );
@@ -189,7 +196,7 @@ FindClosestIntersection( Scene scene, in ref Ray ray, out SurfaceInteraction sur
 }
 
 bool
-FindAnyIntersection( Scene scene, in ref Ray ray )
+FindAnyIntersection( Scene* scene, in ref Ray ray )
 {
     return scene.m_rootPrim.AnyIntersection( ray );
 }
