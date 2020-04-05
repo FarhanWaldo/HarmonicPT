@@ -1,0 +1,17 @@
+* Tasks:
+** Geometry [0/3]
+   - [ ] Implement triangle geo intersection
+   - [ ] Differential geometry for sphere intersection
+   - [ ] Differential geometry for triangle intersection
+** Materials [0/3]
+   - [ ] Implement BxDF class
+   - [ ] Implement BSDF wrapper
+   - [ ] Different BxDFs [0/5]
+	 - [ ] Diffuse Reflection (lambertian)
+	 - [ ] Specular Reflection
+	 - [ ] Specular Tranmission
+	 - [ ] Microfacet Reflection
+	 - [ ] Microfacet Transmission
+** Acceleration [0/2]
+   - [ ] Implement BVH
+   - [ ] Implement KD-tree
