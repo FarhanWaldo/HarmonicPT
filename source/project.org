@@ -3,8 +3,8 @@
    - [ ] Implement triangle geo intersection
    - [ ] Differential geometry for sphere intersection
    - [ ] Differential geometry for triangle intersection
-** Materials [0/3]
-   - [ ] Implement BxDF class
+** Materials [1/3]
+   - [X] Implement BxDF class
    - [ ] Implement BSDF wrapper
    - [ ] Different BxDFs [0/5]
 	 - [ ] Diffuse Reflection (lambertian)
