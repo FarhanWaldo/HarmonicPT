@@ -66,7 +66,8 @@ pure T Min( T )( in T a, in T b ) { return  ( a < b ) ? a : b ;  }
 pure T Abs( T )( in T a )         { return  ( a < T(0) ) ? -a : a; }
 
 // Clamps a value 'val' to the closed interval [min, max]
-pure T Clamp( T )( T val, T min, T max ) {
+pure T
+Clamp( T )( T val, T min, T max ) {
     if ( val < min ) { return min; }
     else if ( val > max ) { return max; }
     
@@ -107,7 +108,6 @@ struct RNG
     float rand() {  return frand(&m_seed); }
 }
 
-// pure const 
 
 //////////////////////////////////////////
 //
@@ -302,10 +302,10 @@ struct QuatT( Type )
 
 //  Cross product is only valid for 3 dimensional vectors
 //
-pure VecT!( T, 3 )
-v_cross( T ) ( in VecT!( T, 3 ) a, in VecT!( T , 3 ) b )
+pure VecT!(T,3)
+v_cross( T ) ( in VecT!(T,3) a, in VecT!(T,3) b )
 {
-    return VecT!( T, 3 )(
+    return VecT!(T,3) (
             a.y*b.z - b.y*a.z,
             b.x*a.z - a.x*b.z,
             a.x*b.y - b.x*a.y  );
@@ -591,10 +591,25 @@ Mat4x4_OrthoProjection( T )( float width, float height, float _near, float _far 
 	m.dd[0][0] = 2.0f / width;
 	m.dd[1][1] = 2.0f / height;
 	m.dd[2][2] = fRange;
-	m.dd[3][3] = 1.0f;
+	m.dd[2][3] = 1.0f;
 
 	m.dd[3][2] = fRange * _near;
 
+    m.dd[0][1] = 0.0f;
+	m.dd[0][2] = 0.0f;
+	m.dd[0][3] = 0.0f;
+
+	m.dd[1][0] = 0.0f;
+	m.dd[1][2] = 0.0f;
+	m.dd[1][3] = 0.0f;
+	
+	m.dd[2][0] = 0.0f;
+	m.dd[2][1] = 0.0f;
+
+	m.dd[3][0] = 0.0f;
+	m.dd[3][1] = 0.0f;
+	m.dd[3][3] = 0.0f;
+	
     return m;
 }
 
@@ -620,21 +635,24 @@ Mat4x4_LookAtLH( T )(
 {
     Mat4x4!T m = {};
 
-	vec3 zaxis = v_normalise(target - pos);
-	vec3 xaxis = v_normalise( v_cross(up, zaxis));
-	vec3 yaxis = v_cross(zaxis, xaxis);
+	vec3 zaxis = v_normalise( target - pos );
+	vec3 xaxis = v_normalise( v_cross( up, zaxis ) );
+	vec3 yaxis = v_normalise( v_cross( zaxis, xaxis ) ); 
 
 	m.dd[0][0] = xaxis.x;
 	m.dd[0][1] = yaxis.x;
 	m.dd[0][2] = zaxis.x;
+	m.dd[0][3] = 0.0f;
 
 	m.dd[1][0] = xaxis.y;
 	m.dd[1][1] = yaxis.y;
 	m.dd[1][2] = zaxis.y;
+	m.dd[1][3] = 0.0f;
 
 	m.dd[2][0] = xaxis.z;
 	m.dd[2][1] = yaxis.z;
 	m.dd[2][2] = zaxis.z;
+	m.dd[2][3] = 0.0f;
 
 	m.dd[3][0] = -v_dot(xaxis, pos);
 	m.dd[3][1] = -v_dot(yaxis, pos);
