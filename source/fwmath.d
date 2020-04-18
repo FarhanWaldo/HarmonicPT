@@ -1,5 +1,40 @@
 import std.math;
 
+// Emit an actual FMA instruction... damn you, Phobos
+//
+
+/**
+    Returns the value of a*b + c, evaluated with an FMA instruction
+    vfmadd231sd (double precision)
+*/
+double fw_fma( double a, double b, double c ) @safe pure @nogc nothrow {
+	asm @safe pure @nogc nothrow {
+		naked;
+		vfmadd231sd XMM0, XMM1, XMM2;
+		ret;
+	}
+}
+
+/**
+    Returns the value of a*b + c, evaluated with an FMA instruction
+    vfmadd231ss (single precision)
+*/
+float fw_fma( float a, float b, float c ) @safe pure @nogc nothrow {
+	asm @safe pure @nogc nothrow {
+		naked;
+		vfmadd231ss XMM0, XMM1, XMM2;
+		ret;
+	}
+}
+
+@safe pure @nogc nothrow
+T diffOfProducts( T )( T a, T b, T c, T d ) {
+    T cd = c * d;
+	T err = fw_fma( -c, d, cd );
+	T dop = fw_fma( a, b, -cd );
+	return dop + err;
+}
+
 //////////////////////////////////////////
 //
 //  Aliases

@@ -1,5 +1,4 @@
-import std.math;
-
+import std.math : sqrt;
 
 import fwmath;
 import spectrum;
@@ -20,7 +19,7 @@ enum BxDFType
 					   Specular
 }
 
-
+/**
 //
 //  Utility Methods
 //
@@ -29,19 +28,19 @@ enum BxDFType
 //  The Normal vector for the surface is the z-axis [0, 0, 1]
 //  The X and Y axes are the tangent, and bitangent respectively
 //
-//  The parameterisation from the Cartesian domain to Spherical Coords
+//  The parameterisation from Cartesian -> Spherical coordinate system
 //  
 //      x = r * sin( theta ) * cos( phi )
 //      y = r * sin( theta ) * sin( phi )
 //      z = r * cos( theta )
 //
 //      Where:
-//          r       = radius of Sphere (has value of 1 in the reflection coordinate system)
+//          r       = radius of Sphere (radius = 1, in the reflection coordinate system)
 //          theta   = angle between the Z and X axes [ 0, Pi ]
 //          phi     = angle between the X and Y axes [ 0, 2*Pi )
 //
 //
-
+*/
 
 pure float CosTheta( in vec3 w )        { return w.z; }
 pure float Cos2Theta( in vec3 w )       { return w.z * w.z; }
@@ -114,7 +113,7 @@ pure vec3 FaceForward( in vec3 v, in vec3 n ) {
 //
 //  Defines the abstract base class for BRDFs and BTDFs
 //
-abstract class BaseBxdf
+abstract class BaseBxDF
 {
     const BxDFType    m_type;
 
@@ -160,7 +159,7 @@ abstract class BaseBxdf
 	/**
         Returns the PDF value for a pair of incoming and outgoing directions
     */
-	pure const float PDF( in vec3 wo, in vec3 wi );
+	pure const float Pdf( in vec3 wo, in vec3 wi );
 
 
 	/**
@@ -175,4 +174,69 @@ abstract class BaseBxdf
           of outgoing directions.
     */
 	pure const vec3 Rho( in vec2[] samples1, in vec2[] samples2 );
+}
+
+
+
+struct BSDF
+{
+    vec3  m_geoNormal;
+
+	//  Can be used to transform in/out of the shading coordinate system
+	//  { m_shadingNormal, m_shadingS, m_shadingT } form an orthonormal basis on the surface of the shading point
+	//
+	vec3  m_shadingNormal;
+	vec3  m_shadingS;
+	vec3  m_shadingT;
+
+	BaseBxDF*[8]  m_bxdfs;
+    uint          m_numBxdfs = 0;
+	
+	float         m_eta; // Relative index of refraction
+
+	this( in vec3 geoNormal, in vec3 shadingNormal, in vec3 dpdu, float eta = 1.0f )
+	{
+	    m_geoNormal     = geoNormal;
+		m_shadingNormal = shadingNormal;
+		m_shadingS      = v_normalise( dpdu );
+		m_shadingT      = v_normalise( v_cross( shadingNormal, dpdu ) );
+		m_eta           = eta;
+	}
+
+	void AddBxDF( BaseBxDF* bxdf ) {
+	    assert ( m_numBxdfs <= m_bxdfs.length, "Trying to insert to many BxDFs into BSDF object" );
+
+		m_bxdfs[ m_numBxdfs ] = bxdf;
+		++m_numBxdfs;
+	}
+
+	pure const uint
+	NumComponents( BxDFType flags = BxDFType.All )
+	{
+	    uint numMatching = 0;
+	    foreach (i; 0..m_numBxdfs ) {
+		    if ( m_bxdfs[i].MatchesType( flags ) )
+			    ++numMatching;
+		}
+		return numMatching;
+	}
+
+	pure const vec3
+	WorldToLocal( in vec3 w )
+	{
+	    return vec3(
+		    v_dot( w, m_shadingS ),
+			v_dot( w, m_shadingT ),
+			v_dot( w, m_shadingNormal ) );
+	}
+
+	pure const vec3
+	LocalToWorld( in vec3 w )
+	{
+	    return vec3(
+		    m_shadingS.x*w.x + m_shadingT.x*w.y + m_shadingNormal.x*w.z,
+		    m_shadingS.y*w.x + m_shadingT.y*w.y + m_shadingNormal.y*w.z,
+		    m_shadingS.z*w.x + m_shadingT.z*w.y + m_shadingNormal.z*w.z,
+		);
+	}
 }

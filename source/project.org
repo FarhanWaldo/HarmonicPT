@@ -12,6 +12,10 @@
 	 - [ ] Specular Tranmission
 	 - [ ] Microfacet Reflection
 	 - [ ] Microfacet Transmission
-** Acceleration [0/2]
+** Acceleration [0/3]
    - [ ] Implement BVH
    - [ ] Implement KD-tree
+** Spectrum [0/3]
+- [ ] Replace "vec3" with Spectrum type where it's required
+- [ ] Alias currrent Spectrum type as vec3
+- [ ] Implement Wenzel and Johanika's [[https://rgl.epfl.ch/publications/Jakob2019Spectral][Wenzel and Johanika's paper]] for efficient spectral upsampling 
