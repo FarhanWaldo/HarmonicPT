@@ -1,15 +1,17 @@
 import fwmath;
 
-alias vec3 Spectrum;
 
-// const enum NumSpectralSamples = 10;
-// const enum MinWavelength = 400.0f; // nanometres
-// const enum MaxWavelength = 700.0f; // nanometres
+immutable enum MinSampledWavelength = 400;
+immutable enum MaxSampledWavelength = 700;
+immutable enum SpectralSampleCount  = 60;
+
+alias vec3 Spectrum;
+alias SampledSpectrumT!SpectralSampleCount SampledSpectrum;
+
 
 /**
     Represents an SPD (Spectral Power Distribution) as a weighted sum of n-basis functions.
-    The function basis should be an orthogonal function basis so that the coefficients can be
-    linearly combined and scaled.
+    The coefficients of different SPDs can be linearly combined.
 
     This abstraction is sufficient to represent an SPD as a series of coefficients of these basis functions,
     or to represent as a discretely sampled SPD, breaking the wavelength range into segments and storing the spectral
@@ -94,11 +96,6 @@ struct CoefficientSpectrum( int NumSpectralSamples )
 	}
 };
 
-immutable enum MinSampledWavelength = 400;
-immutable enum MaxSampledWavelength = 700;
-immutable enum SpectralSampleCount  = 60;
-
-alias SampledSpectrumT!SpectralSampleCount SampledSpectrum;
 
 /**
     Represents an SPD by partitioning the wavelength range into #SpectralSampleCount of half open intervals.
@@ -114,13 +111,38 @@ struct SampledSpectrumT( int NumSpectralSamples )
 }
 
 pure @nogc nothrow
-SampledSpectrum
-SampledSpectrumFromSamples(
+SampledSpectrum SampledSpectrumFromSamples(
     in float[] wavelengths,
 	in float[] samples )
 {
+    // F_TODO::
     return SampledSpectrum();
 }
+
+/**
+    Linear transformations between XYZ colour space and sRGB
+*/
+
+pragma(inline, true) pure @nogc nothrow
+vec3 XYZToRGB( const vec3 xyz )
+{
+    return vec3(
+       	  3.240479f*xyz[0] - 1.537150f*xyz[1] - 0.498535f*xyz[2],
+    	 -0.969256f*xyz[0] + 1.875991f*xyz[1] + 0.041556f*xyz[2],
+    	  0.055648f*xyz[0] - 0.204043f*xyz[1] + 1.057311f*xyz[2]
+	);
+}
+
+pragma(inline, true) pure @nogc nothrow
+vec3 RGBToXYX( const vec3 rgb )
+{
+    return vec3(
+	    0.412453f*rgb[0] + 0.357580f*rgb[1] + 0.180423f*rgb[2],
+		0.212671f*rgb[0] + 0.715160f*rgb[2] + 0.072169f*rgb[2],
+		0.019334f*rgb[0] + 0.119193f*rgb[1] + 0.950227f*rgb[2]
+	);
+}
+
 
 /**
     Store a discretely sampled SPD for each of the CIE X,Y,Z tristumulus colour functions
