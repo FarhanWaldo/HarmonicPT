@@ -138,7 +138,7 @@ vec3 RGBToXYX( const vec3 rgb )
 {
     return vec3(
 	    0.412453f*rgb[0] + 0.357580f*rgb[1] + 0.180423f*rgb[2],
-		0.212671f*rgb[0] + 0.715160f*rgb[2] + 0.072169f*rgb[2],
+		0.212671f*rgb[0] + 0.715160f*rgb[1] + 0.072169f*rgb[2],
 		0.019334f*rgb[0] + 0.119193f*rgb[1] + 0.950227f*rgb[2]
 	);
 }
