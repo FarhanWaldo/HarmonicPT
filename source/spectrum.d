@@ -9,6 +9,13 @@ alias vec3 Spectrum;
 alias SampledSpectrumT!SpectralSampleCount SampledSpectrum;
 
 
+enum SpectrumType
+{
+    Reflectance,
+	Illuminant
+};
+
+
 /**
     Represents an SPD (Spectral Power Distribution) as a weighted sum of n-basis functions.
     The coefficients of different SPDs can be linearly combined.
@@ -110,6 +117,22 @@ struct SampledSpectrumT( int NumSpectralSamples )
 	
 }
 
+/**
+    Returns whether or not the wavelength samples are sorted (in increasing order)
+*/
+pure @nogc nothrow
+bool SpectralSamplesAreSorted(
+    in float[] wavelengths )
+{
+    foreach( i; 0..wavelengths.length-1 ) {
+	    if ( wavelengths[i] > wavelengths[i+1] ) {
+	       return false;
+	   }
+	}
+
+	return true;
+}
+
 pure @nogc nothrow
 SampledSpectrum SampledSpectrumFromSamples(
     in float[] wavelengths,
@@ -118,6 +141,50 @@ SampledSpectrum SampledSpectrumFromSamples(
     // F_TODO::
     return SampledSpectrum();
 }
+
+/**
+    Wenzel Jakob and Johannika's low dimensional function space for spectral upsampling paper (2019)
+*/
+struct RGB2SpectralTable
+{
+	uint     m_res;
+	float*   m_scale;
+	float*   m_data;
+
+};
+
+pure nothrow @nogc
+RGB2SpectralTable ConstructRGB2SpectralTable()
+{
+	RGB2SpectralTable coeffTable;
+
+	// import contents of tables/srgb.coeff file at compile time
+    char[] srgbCoefficientsFile = cast(char[]) import("srgb.coeff"); 
+	
+	char[] header = srgbCoefficientsFile[0..4];
+	// writeln("header = " ~ header );
+ 	uint* pRes = cast(uint*)( &srgbCoefficientsFile[4] );
+	uint  res = *pRes;
+	// writeln("res = " ~ to!string(res) );
+
+    immutable uint RGB2SPEC_N_COEFFS = 3;
+		
+	ulong size_scale = float.sizeof * res;
+	ulong size_data  = float.sizeof * res * res * res * 3 * RGB2SPEC_N_COEFFS;
+
+	float* scale = cast(float*)( &srgbCoefficientsFile[ 8 ] );
+	float* data  = cast(float*)( &srgbCoefficientsFile[ 8 + size_scale ] );
+
+	// writeln( scale[0..10] );
+	// writeln( data[0..10] );
+
+	coeffTable.m_res = res;
+	coeffTable.m_scale = scale;
+	coeffTable.m_data = data;
+		
+	return coeffTable;
+}
+
 
 /**
     Linear transformations between XYZ colour space and sRGB

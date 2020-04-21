@@ -17,10 +17,11 @@
 	"license": "proprietary",
 	"name": "d-pathtracer",
 	"sourceFiles": [
-		"source/stb_image_write.o"
+		"source/stb_image_write.obj"
 	],
 
 	"targetPath": "bin/",
 	"targetType": "executable",
-	"versions": ["DerelictSDL2_Static"]
+	"versions": ["DerelictSDL2_Static"],
+	"stringImportPaths": ["tables"]
 }

@@ -17,6 +17,7 @@ import shape;
 import sampling;
 import material;
 
+
 void main( string[] args)
 {
     // Disable the garbage collector
