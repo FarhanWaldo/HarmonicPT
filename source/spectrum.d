@@ -147,11 +147,26 @@ SampledSpectrum SampledSpectrumFromSamples(
 */
 struct RGB2SpectralTable
 {
-	uint     m_res;
-	float*   m_scale;
-	float*   m_data;
+	uint     res;
+	float*   scale;
+	float*   data;
 
 };
+
+immutable uint RGB2SPEC_N_COEFFS = 3;
+alias float[RGB2SPEC_N_COEFFS] SrgbSpectrum;
+
+import std.math : sqrt;
+float RGB2Spectral_PreciseEval(
+    in float[RGB2SPEC_N_COEFFS] coeffs,
+	float lambda )
+{
+    // x = c_0*lambda^2 + c_1*lambda + c_2
+    float x = fw_fma( fw_fma( coeffs[0], lambda, coeffs[1] ), lambda, coeffs[2] );
+	float y = 1.0f / sqrt( fw_fma( x, x, 1.0f ) );
+
+	return fw_fma( 0.5f*x, y, 0.5f );
+}
 
 pure nothrow @nogc
 RGB2SpectralTable ConstructRGB2SpectralTable()
@@ -167,7 +182,6 @@ RGB2SpectralTable ConstructRGB2SpectralTable()
 	uint  res = *pRes;
 	// writeln("res = " ~ to!string(res) );
 
-    immutable uint RGB2SPEC_N_COEFFS = 3;
 		
 	ulong size_scale = float.sizeof * res;
 	ulong size_data  = float.sizeof * res * res * res * 3 * RGB2SPEC_N_COEFFS;
@@ -178,12 +192,86 @@ RGB2SpectralTable ConstructRGB2SpectralTable()
 	// writeln( scale[0..10] );
 	// writeln( data[0..10] );
 
-	coeffTable.m_res = res;
-	coeffTable.m_scale = scale;
-	coeffTable.m_data = data;
+	coeffTable.res = res;
+	coeffTable.scale = scale;
+	coeffTable.data = data;
 		
 	return coeffTable;
 }
+
+pure @nogc nothrow
+int RGB2Spectral_FindInterval( float* values, int size_, float x )
+{
+    int left = 0,
+        last_interval = size_ - 2,
+        size = last_interval;
+
+    while (size > 0) {
+        int half   = size >> 1,
+            middle = left + half + 1;
+
+        if (values[middle] < x) {
+            left = middle;
+            size -= half + 1;
+        } else {
+            size = half;
+        }
+    }
+
+    return Min(left, last_interval);
+}
+
+pure @nogc nothrow
+void RGB2Spectral_Fetch(
+    RGB2SpectralTable* model,
+	in  float[3]           rgb,
+	out float[RGB2SPEC_N_COEFFS] outCoeffs)
+{
+    alias ulong uint32_t;
+	
+    assert(rgb[0] >= 0.0f && rgb[1] >= 0.0f && rgb[2] >= 0.0f &&
+           rgb[0] <= 1.0f && rgb[1] <= 1.0f && rgb[2] <= 1.0f);
+
+    /* Determine largest RGB component */
+    int i = 0, res = model.res;
+    for (int j = 1; j < 3; ++j)
+        if (rgb[j] >= rgb[i])
+            i = j;
+
+    float z     = rgb[i],
+          scale = (res - 1) / z,
+          x     = rgb[(i + 1) % 3] * scale,
+          y     = rgb[(i + 2) % 3] * scale;
+
+    /* Bilinearly interpolated lookup */
+    uint32_t xi = Min(cast(uint32_t) x, res - 2),
+             yi = Min(cast(uint32_t) y, res - 2),
+             zi = RGB2Spectral_FindInterval(model.scale, model.res, z),
+             offset = (((i * res + zi) * res + yi) * res + xi) * RGB2SPEC_N_COEFFS,
+             dx = RGB2SPEC_N_COEFFS,
+             dy = RGB2SPEC_N_COEFFS * res,
+             dz = RGB2SPEC_N_COEFFS * res * res;
+
+    float x1 = x - xi, x0 = 1.0f - x1,
+          y1 = y - yi, y0 = 1.0f - y1,
+          z1 = (z - model.scale[zi]) /
+               (model.scale[zi + 1] - model.scale[zi]),
+          z0 = 1.0f - z1;
+
+    for (int j = 0; j < RGB2SPEC_N_COEFFS; ++j) {
+        outCoeffs[j] =
+			     ((model.data[offset               ] * x0 +
+                   model.data[offset + dx          ] * x1) * y0 +
+                  (model.data[offset + dy          ] * x0 +
+                   model.data[offset + dy + dx     ] * x1) * y1) * z0 +
+                 ((model.data[offset + dz          ] * x0 +
+                   model.data[offset + dz + dx     ] * x1) * y0 +
+                  (model.data[offset + dz + dy     ] * x0 +
+                   model.data[offset + dz + dy + dx] * x1) * y1) * z1;
+        offset++;
+    }
+}
+
 
 
 /**

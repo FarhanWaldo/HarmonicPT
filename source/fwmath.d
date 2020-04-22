@@ -3,10 +3,14 @@ import std.math;
 // Emit an actual FMA instruction... damn you, Phobos
 //
 
+// F_TODO:: fw_fma won't get inlined, it's better to use a compiler intrinsic for this rather than inline asm
+//          Look into using LDC, which inserts a compiler intrinsic when using std.math.fma
+
 /**
     Returns the value of a*b + c, evaluated with an FMA instruction
     vfmadd231sd (double precision)
 */
+pragma(inline)
 double fw_fma( double a, double b, double c ) @safe pure @nogc nothrow {
 	asm @safe pure @nogc nothrow {
 		naked;
@@ -19,6 +23,7 @@ double fw_fma( double a, double b, double c ) @safe pure @nogc nothrow {
     Returns the value of a*b + c, evaluated with an FMA instruction
     vfmadd231ss (single precision)
 */
+pragma(inline)
 float fw_fma( float a, float b, float c ) @safe pure @nogc nothrow {
 	asm @safe pure @nogc nothrow {
 		naked;
@@ -27,7 +32,7 @@ float fw_fma( float a, float b, float c ) @safe pure @nogc nothrow {
 	}
 }
 
-@safe pure @nogc nothrow
+pragma(inline) @safe pure @nogc nothrow
 T diffOfProducts( T )( T a, T b, T c, T d ) {
     T cd = c * d;
 	T err = fw_fma( -c, d, cd );
@@ -82,27 +87,32 @@ alias vec4f vec4;
 //
 //////////////////////////////////////////
 
-const float PI					= 3.14159265359f;
-const float TAU 				= 6.28318530718f;
-const float PI_OVER_4   		= 0.78539816339f;
+immutable float PI					= 3.14159265359f;
+immutable float TAU 				= 6.28318530718f;
+immutable float PI_OVER_4   		= 0.78539816339f;
 
-const float INV_PI				= 0.31830988618f;
-const float INV_TAU				= 0.15915494309f;
-const float INV_PI2				= 0.10132118364f;
+immutable float INV_PI				= 0.31830988618f;
+immutable float INV_TAU				= 0.15915494309f;
+immutable float INV_PI_SQRD		   	= 0.10132118364f;
 
-const float EPSILON             = 1e-5f;
+immutable float EPSILON             = 1e-5f;
 
 // Converts degrees into radians
-pure T DegreesToRad( T )( in T degrees ) { return degrees*0.01745329251; }
+pragma(inline, true) pure @nogc nothrow
+T DegreesToRad( T )( in T degrees ) { return degrees*0.01745329251; }
 
-pure T Max( T )( in T a, in T b ) { return  ( a > b ) ? a : b ;  }
-pure T Min( T )( in T a, in T b ) { return  ( a < b ) ? a : b ;  }
+pragma(inline, true) pure @nogc nothrow
+T Max( T )( in T a, in T b ) { return  ( a > b ) ? a : b ;  }
 
-pure T Abs( T )( in T a )         { return  ( a < T(0) ) ? -a : a; }
+pragma(inline, true) pure @nogc nothrow
+T Min( T )( in T a, in T b ) { return  ( a < b ) ? a : b ;  }
+
+pragma(inline, true) pure @nogc nothrow
+T Abs( T )( in T a )         { return  ( a < T(0) ) ? -a : a; }
 
 // Clamps a value 'val' to the closed interval [min, max]
-pure T
-Clamp( T )( T val, T min, T max ) {
+pragma(inline) pure @nogc nothrow
+T Clamp( T )( const T val, const T min, const T max ) {
     if ( val < min ) { return min; }
     else if ( val > max ) { return max; }
     
