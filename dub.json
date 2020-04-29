@@ -16,10 +16,14 @@
 	"description": "A Physically Based Path Tracing Renderer written in D",
 	"license": "proprietary",
 	"name": "d-pathtracer",
-	"sourceFiles": [
+    
+	"sourceFiles-windows-x86_64-dmd": [
 		"source/stb_image_write.obj"
 	],
-
+    "sourceFiles-osx-x86_64-dmd": [
+        "source/stb_image_write.o"
+    ],
+    
 	"targetPath": "bin/",
 	"targetType": "executable",
 	"versions": ["DerelictSDL2_Static"],
