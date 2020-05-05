@@ -1,5 +1,5 @@
 import fwmath;
-
+import std.math : sqrt, isNaN;
 
 immutable enum MinSampledWavelength = 400;
 immutable enum MaxSampledWavelength = 700;
@@ -31,6 +31,7 @@ struct CoefficientSpectrum( int NumSpectralSamples )
 	// Allows indexing a CoefficientSpectrum object as if it was the m_samples array
 	//
 	alias m_coeffs this;
+	alias NumSpectralSamples NumCoefficients;
 
 	this( float c )
 	{
@@ -80,7 +81,8 @@ struct CoefficientSpectrum( int NumSpectralSamples )
 	    mixin( "m_coeffs[] " ~op~ "= s.m_coeffs[]" ); 
 	}
 
-	pure const bool
+	pure const @nogc nothrow @safe
+	bool
 	IsBlack()
 	{
 		foreach (i; 0..NumSpectralSamples ) {
@@ -89,9 +91,20 @@ struct CoefficientSpectrum( int NumSpectralSamples )
 	    return true;	
 	}
 
-	pure const @nogc nothrow
+    pure const @nogc nothrow @safe
+	bool
+	HasNaNs() {
+	    foreach (i; 0..NumSpectralSamples ) {
+            if ( isNaN( m_coeffs[i] ) ) {
+			    return true;
+			}
+		}
+	    return false;
+	}
+	
+	pure const @nogc nothrow @safe
 	CoefficientSpectrum
-	Clamp( float low, float high )
+	Clamp( float low = 0.0f, float high = float.max )
 	{
 	    CoefficientSpectrum newSpectrum = void;
 
@@ -102,6 +115,26 @@ struct CoefficientSpectrum( int NumSpectralSamples )
 		return newSpectrum;
 	}
 };
+
+pragma(inline, true)
+pure @nogc nothrow @safe
+Spectrum LerpSpectra( float t, in Spectrum s1, in Spectrum s2 )
+{
+	return (1.0f-t)*s1 + t*s2;
+}
+
+pragma(inline, true )
+pure @nogc nothrow @safe
+CoefficientSpectrum SqrtSpectra( int NC )( in CoefficientSpectrum!NC s )
+{
+	CoefficientSpectrum!NC cs = void;
+	foreach (i; 0..NC )
+	{
+	    cs[i] = sqrt( s[i] );
+	}
+
+	return cs;
+}
 
 
 /**
@@ -114,13 +147,14 @@ struct SampledSpectrumT( int NumSpectralSamples )
 
 	// *struct inheritance in D*
 	alias m_coefficientSpectrum this;
+	alias NumSpectralSamples    NumSamples;
 	
 }
 
 /**
     Returns whether or not the wavelength samples are sorted (in increasing order)
 */
-pure @nogc nothrow
+pure @nogc nothrow @safe
 bool SpectralSamplesAreSorted(
     in float[] wavelengths )
 {
@@ -156,7 +190,7 @@ struct RGB2SpectralTable
 immutable uint RGB2SPEC_N_COEFFS = 3;
 alias float[RGB2SPEC_N_COEFFS] SrgbSpectrum;
 
-import std.math : sqrt;
+
 float RGB2Spectral_PreciseEval(
     in float[RGB2SPEC_N_COEFFS] coeffs,
 	float lambda )
