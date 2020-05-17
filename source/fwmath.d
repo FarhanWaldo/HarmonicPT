@@ -126,6 +126,38 @@ unittest
     static assert( Clamp( 1e-5, 0.0, 2e-5) == 1e-5 );
 }
 
+pragma(inline, true) pure nothrow @nogc @safe
+T Lerp( T )( float interpolant, in T a, in T b )
+{
+    return (1.0f - interpolant)*a + interpolant*b;
+}
+
+pragma(inline, true) pure @nogc nothrow @safe
+void Swap( T )( ref T a, ref T b ) {
+	T c = a;
+	a = b;
+	b = c;
+}
+unittest
+{
+	{
+		float a = 0.0f;
+		float b = 1.0f;
+
+		Swap( a, b );
+		static assert( ( a == 1.0f ) && ( b == 0.0f ) );
+	}
+
+    {
+	    double a = 0.0;
+		double b = 1.0;
+
+		Swap( a, b )
+		static assert( ( a == 1.0 ) && ( b == 0.0 ) );
+	}
+
+}
+
 pure float
 frand( int* seed )
 {
@@ -161,7 +193,7 @@ struct RNG
 //////////////////////////////////////////
 
 
-struct VecT( Type, int Dim ) //if (( Dim >= 2 ) && Dim ( <= 4 ))
+struct VecT( Type, int Dim )
 {
     static assert ( Dim >= 2, "Dim value is too low" );
     static assert ( Dim <= 4, "Dim value is too high");
@@ -200,10 +232,11 @@ struct VecT( Type, int Dim ) //if (( Dim >= 2 ) && Dim ( <= 4 ))
 
     this( Type v )
     {
-        data[0] = v;
-        data[1] = v;
-        static if ( Dim >= 3 ) data[2] = v;
-        static if ( Dim >= 4 ) data[3] = v;
+	    data[] = v;
+        // data[0] = v;
+        // data[1] = v;
+        // static if ( Dim >= 3 ) data[2] = v;
+        // static if ( Dim >= 4 ) data[3] = v;
     }
 
     //  Specialise constructor by dimension
@@ -258,13 +291,13 @@ struct VecT( Type, int Dim ) //if (( Dim >= 2 ) && Dim ( <= 4 ))
     pure const VecT
     opBinary( string op )( valueType f ) 
     {
-        VecT v;
+        VecT v = void;
 
         v.data[0] = mixin( "data[0]"~op~"f" );
         v.data[1] = mixin( "data[1]"~op~"f" );
         static if ( dim >= 3 )  v.data[2] = mixin( "data[2]"~op~"f" );
         static if ( dim >= 4 )  v.data[3] = mixin( "data[3]"~op~"f" );
-
+		
         return v;
     }
 

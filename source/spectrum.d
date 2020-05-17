@@ -118,9 +118,9 @@ struct CoefficientSpectrum( int NumSpectralSamples )
 
 pragma(inline, true)
 pure @nogc nothrow @safe
-Spectrum LerpSpectra( float t, in Spectrum s1, in Spectrum s2 )
+Spectrum LerpSpectra( float t, in Spectrum s0, in Spectrum s1 )
 {
-	return (1.0f-t)*s1 + t*s2;
+	return (1.0f-t)*s0 + t*s1;
 }
 
 pragma(inline, true )
@@ -128,8 +128,7 @@ pure @nogc nothrow @safe
 CoefficientSpectrum SqrtSpectra( int NC )( in CoefficientSpectrum!NC s )
 {
 	CoefficientSpectrum!NC cs = void;
-	foreach (i; 0..NC )
-	{
+	foreach (i; 0..NC ) {
 	    cs[i] = sqrt( s[i] );
 	}
 
@@ -167,13 +166,92 @@ bool SpectralSamplesAreSorted(
 	return true;
 }
 
+/**
+    Perform an in-place bubble sort on the arrays of wavelengths and samples, based on wavelength values
+    Sort into monotonic increasing wavelengths
+
+    These arrays will have 8-16 elements at most, so an in-place bubble sort is the fastest way
+*/
+pure @nogc nothrow @safe
+void SortSpectralSamples( ref float[] wavelengths, ref float[] samples ) {
+    assert( wavelengths.length == samples.length, "wavelengths and samples array are of different sizes" );
+	
+    ulong numElements = wavelengths.length;
+
+    foreach( i; 0.. numElements ) {
+	    foreach( j; 1..numElements-i ) {
+		    if ( wavelengths[j-1] > wavelengths[j] ) {
+			    Swap( wavelengths[j-1], wavelengths[j] );
+				Swap( samples[j-1], samples[j] );
+			}
+		}
+	}
+}
+// F_TODO:: Test this out 
+
 pure @nogc nothrow
 SampledSpectrum SampledSpectrumFromSamples(
-    in float[] wavelengths,
-	in float[] samples )
+    ref float[] wavelengths,
+    ref float[] samples )
 {
     // F_TODO::
-    return SampledSpectrum();
+    //return SampledSpectrum();
+	if ( !SpectralSamplesAreSorted( wavelengths ) )
+	{
+	    // Will sort these arrays in place
+	    SortSpectralSamples( wavelengths, samples );
+	}
+
+	SampledSpectrum r = void;
+	foreach( i; 0 .. r.NumSamples )
+	{
+	    immutable float t0 = cast(float)(i) / cast(float)(r.NumSamples);
+		immutable float t1 = cast(float)(i+1) / cast(float)(r.NumSamples);
+	    immutable float lambda0 = Lerp( t0, cast(float)(MinSampledWavelength), cast(float) MaxSampledWavelength );
+		immutable float lambda1 = Lerp( t1,cast(float)  MinSampledWavelength, cast(float)  MaxSampledWavelength );
+
+		r[i] = AverageSpectrumSamples( wavelengths, samples, lambda0, lambda1 );
+	}
+
+	return r;
+}
+
+pure nothrow @nogc @safe
+float AverageSpectrumSamples(
+    in float[] wavelengths,
+	in float[] samples,
+	float lambdaStart,
+	float lambdaEnd )
+{
+    immutable ulong nSamples = samples.length;
+    if ( lambdaEnd <= wavelengths[0] ) { return samples[0]; }
+	if ( lambdaStart >= wavelengths[nSamples - 1] ) { return samples[nSamples - 1]; }
+	if ( nSamples == 1 ) { return samples[0]; }
+	
+    float sum = 0.0f;
+
+    if ( lambdaStart < wavelengths[0] ) {
+	    sum += samples[0]*(wavelengths[0] - lambdaStart);
+	}
+	if ( lambdaEnd > wavelengths[nSamples-1] ) {
+	    sum += samples[nSamples-1]*(lambdaEnd - wavelengths[nSamples-1]);
+    }
+
+    int i = 0;
+	while ( lambdaStart > wavelengths[i+1]) ++i;
+
+    float interp( float w, int i ) {
+	    return Lerp( (w - wavelengths[i])/(wavelengths[i+1] - wavelengths[i]),
+		             samples[i], samples[i+1] );
+	}
+	for (; i+1 < nSamples && lambdaEnd >= wavelengths[i]; ++i)
+	{
+	    float segLambdaStart = Max( lambdaStart, wavelengths[i]);
+		float segLambdaEnd   = Min( lambdaEnd, wavelengths[i+1] );
+		sum += 0.5f*(interp(segLambdaStart, i) + interp(segLambdaEnd,i))*(segLambdaEnd - segLambdaStart);
+	}
+	
+    return sum / (lambdaEnd-lambdaStart);
 }
 
 /**
