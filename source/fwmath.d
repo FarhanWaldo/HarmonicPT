@@ -264,7 +264,8 @@ struct VecT( Type, int Dim )
     }
 
 
-    pure const Type
+    pure const @nogc @safe nothrow
+	Type
     magnitude()
     {
         static if ( dim == 2 ) return sqrt( x*x + y*y );
@@ -273,13 +274,15 @@ struct VecT( Type, int Dim )
         else static assert( (dim >= 2 ) && ( dim <= 4 ), "Too many dimensions!");
     }
 
+	@nogc @safe nothrow
     void
     normalise()
     {
         this = (Type( 1 )/this.magnitude)*this;
     }
 
-    pure const VecT
+    pure const @nogc @safe nothrow
+	VecT
     opBinary( string op )( VecT rhs )
     {
         static if ( Dim == 2 ) return mixin( "VecT( x"~op~"rhs.x, y"~op~"rhs.y)" );
@@ -288,7 +291,8 @@ struct VecT( Type, int Dim )
         else static assert( (dim >= 2 ) && ( dim <= 4 ), "Not implemented");
     }
 
-    pure const VecT
+    pure const @nogc @safe nothrow
+	VecT
     opBinary( string op )( valueType f ) 
     {
         VecT v = void;
@@ -301,7 +305,8 @@ struct VecT( Type, int Dim )
         return v;
     }
 
-    pure const VecT
+    pure const @nogc @safe nothrow
+	VecT
     opBinaryRight( string op )( valueType f )
     {
         VecT v;
@@ -314,7 +319,8 @@ struct VecT( Type, int Dim )
         return v;
     }
 
-    pure void
+    pure @nogc @safe nothrow
+	void
     opOpAssign( string op )( VecT rhs )
     {
         static assert(  (op == "+") ||
@@ -328,7 +334,8 @@ struct VecT( Type, int Dim )
         static if ( Dim >= 4 ) mixin( "data[3] " ~ op ~ "= rhs[3];");
     }
 
-    pure void
+    pure @nogc @safe nothrow
+	void
     opOpAssign( string op )( Type value )
     {
         static assert(  (op == "+") ||
@@ -380,7 +387,8 @@ struct QuatT( Type )
 
 //  Cross product is only valid for 3 dimensional vectors
 //
-pure VecT!(T,3)
+pure @nogc @safe nothrow
+VecT!(T,3)
 v_cross( T ) ( in VecT!(T,3) a, in VecT!(T,3) b )
 {
     return VecT!(T,3) (
@@ -415,14 +423,16 @@ unittest
     assert( v_dot( b, c ) == 0.0, "Verify that dot( b, c ) == 0, if c = cross( a, b )");
 }
 
-pure vec3
+pure @nogc @safe nothrow
+vec3
 v_normalise( in vec3 v )
 {
     float magnitude = 1.0f/v.magnitude();
     return magnitude * v;
 }
 
-pure T
+pure @nogc @safe nothrow
+T
 v_dot( T, int Dim ) ( in ref VecT!( T, Dim ) a, in ref VecT!( T, Dim ) b )
 {
     static if ( Dim == 2 ) return ( a.x*b.x + a.y*b.y );
@@ -430,7 +440,8 @@ v_dot( T, int Dim ) ( in ref VecT!( T, Dim ) a, in ref VecT!( T, Dim ) b )
     else static assert( ( Dim <= 2 ) && ( Dim >= 3 ), "Invalid dimension for vector");
 }
 
-pure VecT!( T, Dim )
+pure @nogc @safe nothrow
+VecT!( T, Dim )
 v_lerp( T, int Dim ) ( in ref VecT!( T, Dim ) a, in ref VecT!( T, Dim ) b, T interpolant )
 {
     return interpolant*a + ( T(1) - interpolant )*b;
@@ -526,7 +537,8 @@ Mat4x4_Identity( T ) ()
     return m;
 }
 
-pure T
+pure @nogc @safe nothrow
+T
 Mat4x4_Determinant( T )( in ref Mat4x4T!( T ) m )
 {
 	return m.a1*m.b2*m.c3*m.d4 - m.a1*m.b2*m.c4*m.d3 + m.a1*m.b3*m.c4*m.d2 - m.a1*m.b3*m.c2*m.d4
@@ -537,7 +549,8 @@ Mat4x4_Determinant( T )( in ref Mat4x4T!( T ) m )
 		- m.a4*m.b2*m.c3*m.d1 + m.a4*m.b2*m.c1*m.d3 - m.a4*m.b3*m.c1*m.d2 + m.a4*m.b3*m.c2*m.d1;
 }
 
-pure Mat4x4T!( T )
+pure @nogc @safe nothrow
+Mat4x4T!( T )
 Mat4x4_Invert( T )( in ref Mat4x4T!( T ) m )
 {
 	T det = Mat4x4_Determinant( m );
@@ -570,7 +583,8 @@ Mat4x4_Invert( T )( in ref Mat4x4T!( T ) m )
 	return inverseM;
 }
 
-pure Mat4x4T!(T)
+pure @nogc @safe nothrow
+Mat4x4T!(T)
 Mat4x4_Translation( T, U )( auto ref in VecT!( U, 3 ) translate )
 {
     Mat4x4T!T m = { d : [
@@ -582,7 +596,8 @@ Mat4x4_Translation( T, U )( auto ref in VecT!( U, 3 ) translate )
 
     return m;
 }
-pure Mat4x4T!T
+pure @nogc @safe nothrow
+Mat4x4T!T
 Mat4x4_Scale( T )( in ref VecT!( T, 3 ) scale )
 {
     Mat4x4T!T m = { d: [
@@ -595,7 +610,8 @@ Mat4x4_Scale( T )( in ref VecT!( T, 3 ) scale )
     return m;
 }
 
-pure VecT!(T,3)
+pure @nogc @safe nothrow
+VecT!(T,3)
 TransformPoint( T )( in ref Mat4x4T!T m, in ref VecT!( T, 3 ) p )
 {
     VecT!(T,3) xformedP = vec3(
@@ -607,7 +623,8 @@ TransformPoint( T )( in ref Mat4x4T!T m, in ref VecT!( T, 3 ) p )
     return xformedP;
 }
 
-pure VecT!(T,3)
+pure @nogc @safe nothrow
+VecT!(T,3)
 TransformDirection( T )( in ref Mat4x4T!T m, in ref VecT!( T, 3 ) p )
 {
     VecT!(T,3) xformedDir = vec3(
@@ -619,7 +636,8 @@ TransformDirection( T )( in ref Mat4x4T!T m, in ref VecT!( T, 3 ) p )
     return xformedP;
 }
 
-pure Mat4x4T!T
+pure @nogc @safe nothrow
+Mat4x4T!T
 Mat4x4_RotationFromQuat( T )( in ref QuatT!(T) rotQuat )
 {
     alias rotQuat.vec rot;
@@ -659,7 +677,8 @@ Mat4x4_RotationFromQuat( T )( in ref QuatT!(T) rotQuat )
 			0         0      f/(f-n)  1
 			0         0    -fn/(f-n)  0
 */
-pure Mat4x4T!T
+pure @nogc @safe nothrow
+Mat4x4T!T
 Mat4x4_OrthoProjection( T )( float width, float height, float _near, float _far )
 {
     Mat4x4T!T m = Mat4x4_Identity!T();
@@ -704,7 +723,8 @@ How to calculate a view matrix:
 		- dot(xaxis, eye) - dot(yaxis, eye) - dot(zaxis, eye)  l
 
 */
-pure Mat4x4T!T
+pure @nogc @safe nothrow
+Mat4x4T!T
 Mat4x4_LookAtLH( T )(
     in VecT!(T,3) pos,
     in VecT!(T,3) target,
@@ -751,7 +771,8 @@ Mat4x4_LookAtLH( T )(
 			0         0      f/(f-n)  1
 			0         0    -fn/(f-n)  0
 */
-pure Mat4x4T!T
+pure @nogc @safe nothrow
+Mat4x4T!T
 Mat4x4_PerspectiveProjection( T ) (
     float fov,
     float aspectRatio,
@@ -779,7 +800,8 @@ Mat4x4_PerspectiveProjection( T ) (
 //			e1 = 2nd basis vector (output)
 //			e2 = 3rd basis vector (output)
 //
-pure void
+pure @nogc @safe nothrow
+void
 CreateCoordSystem( T )(
     auto ref VecT!(T,3) e0,
     out VecT!(T,3) e1,
@@ -819,7 +841,8 @@ struct Ray
     }
 }
 
-pure Ray
+pure @nogc @safe nothrow
+Ray
 CreateFiniteRaySegment( in ref vec3 start, in ref vec3 end )
 {
     Ray newRay = void;
@@ -864,7 +887,8 @@ struct IntersectionResult
     vec3    m_baryCoord;
 }
 
-pure vec3
+pure @nogc @safe nothrow
+vec3
 Ray_AtT( in ref Ray pRay, float t )
 {
     return pRay.m_origin + t*pRay.m_dir;
