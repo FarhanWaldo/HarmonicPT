@@ -2,6 +2,125 @@ import std.math : sqrt;
 import fwmath;
 import interactions;
 
+enum EShape 
+{
+    Invalid = 0, 
+    Sphere,
+	Triangle,
+}
+
+struct ShapeCommon
+{
+    EShape m_shapeType;
+
+	enum IsShape = true;
+}
+
+struct Shape_Sphere
+{
+    ShapeCommon m_common;
+	alias m_common this;
+
+    Sphere m_geo;
+
+	this( vec3 centre, float radius )
+	{
+	    m_shapeType = EShape.Sphere;
+		m_geo.m_centre = centre;
+		m_geo.m_radius = radius;
+	}
+	
+}
+
+pure @nogc  nothrow
+AABB Shape_ComputeBBox(T)( T* shape )
+{
+    static assert ( T.IsShape, "Did not pass in a type that is a shape" );
+
+	if ( shape.m_shapeType == EShape.Sphere )
+	{
+		Shape_Sphere* sph = cast( Shape_Sphere* ) shape;
+		return AABB( sph.m_geo.m_centre - vec3( sph.m_geo.m_radius ),
+		             sph.m_geo.m_centre + vec3( sph.m_geo.m_radius ) );
+	}
+	else
+	{
+	    return AABB();
+	}
+}
+
+
+pure @nogc nothrow
+bool Shape_IntersectsRay(T)( T* shape, Ray* ray, out IntersectionResult intxRes )
+{
+    static assert ( T.IsShape, "Did not pass in a type that is a shape" );
+
+	if ( shape.m_shapeType == EShape.Sphere )
+	{
+		Shape_Sphere* sphere = cast( Shape_Sphere* ) shape;
+		return Sphere_IntersectsRay( sphere, ray, intxRes );
+	}
+	else
+	{
+	    assert( false, "Invalid shape" );
+	}
+
+	return false;
+}
+
+pure @nogc @safe nothrow
+bool Sphere_IntersectsRay( Shape_Sphere* shpSphere, Ray* ray, out IntersectionResult intxRes )
+{
+        float radius = shpSphere.m_geo.m_radius;
+		vec3  centre = shpSphere.m_geo.m_centre;
+
+        bool intersects = false;
+        float tMin = Min( ray.m_maxT, intxRes.m_minT );
+
+        vec3 oc = ray.m_origin - centre;
+        // Co-efficients of quadratic
+        float a = v_dot( ray.m_dir, ray.m_dir );
+        float b = v_dot( oc, ray.m_dir );
+        float c = v_dot( oc, oc ) - radius * radius;
+        float discriminant = b*b - a*c; // TODO:: Use Kahn's formulae with FMA to increase precision here
+
+        if ( discriminant > 0.0f ) 
+        {
+            float sqrtDiscriminant =  sqrt( discriminant );
+            float invA = 1.0f/a;
+            float temp = ( -1.0f*b - sqrtDiscriminant )*invA;
+
+            if ( temp > 0.0f && temp < tMin )
+            {
+                tMin = temp;
+                intersects = true;
+            }
+
+            temp = ( -1*b + sqrtDiscriminant ) * invA;
+            if ( temp > 0.0f && temp < tMin )
+            {
+                tMin = temp;
+                intersects = true;
+            }
+        }
+
+        if ( intersects )
+        {
+            vec3 intersectP = Ray_AtT( *ray, tMin );
+
+            intxRes.m_hit = true;
+            intxRes.m_minT = tMin;
+            intxRes.m_index = 0; // TODO:: This feels unnecessary
+            // intRes.m_roots
+            intxRes.m_contactPos = intersectP;
+            intxRes.m_contactNormal = v_normalise( intersectP - centre );
+        }
+
+        return intersects;
+
+}
+
+
 /**
     Abstract Base Class for any geometry we want to have ray intersections against.
     Concrete instances of BaseShape should be able to plug into SurfacePrim or EmissiveSurfacePrim

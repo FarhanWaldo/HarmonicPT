@@ -23,6 +23,11 @@ void main( string[] args)
     // Disable the garbage collector
     // GC.disable;
 
+    Shape_Sphere sph = Shape_Sphere( vec3( 0.0f, 1.0f, 0.0f ), 10.0f );
+    writeln( sph );
+	ShapeCommon* sh = cast( ShapeCommon* ) &sph;
+	writeln( Shape_ComputeBBox( sh ) );
+	
     uint imageWidth 	= 640;
     uint imageHeight 	= 480;
 
