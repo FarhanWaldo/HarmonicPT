@@ -25,7 +25,7 @@ struct PrimCommon
 	PrimType    m_primType;
 	enum        IsPrim = true;
 
-	pure @nogc @safe nothrow
+	pure const @nogc @safe nothrow
 	PrimType    GetPrimType() { return m_primType; }
 }
 
@@ -75,15 +75,38 @@ struct PrimArray
 	}
 	
     enum isAggregatePrim = true;
-	pure @nogc @safe nothrow
-	bool AnyIntersection()
+	pure const @nogc @safe nothrow
+	bool AnyIntersection( const(Ray)* ray )
 	{
+		ScenePrimIntersection primIntx;
+
+		foreach ( prim; m_prims )
+		{
+		    if ( Prim_IntersectsRay( prim, ray, primIntx ) ) {
+			    return true;
+			}
+		}
+
 		return false;
 	}
+
+	pure const @nogc @safe nothrow
+	bool ClosestIntersection( const(Ray)* ray, out ScenePrimIntersection scenePrimIntx )
+	{
+	    bool anIntersectionOccurred = false;
+
+        foreach ( prim; m_prims )
+		{
+		    anIntersectionOccurred |= Prim_IntersectsRay( prim, ray, scenePrimIntx );
+		}
+		
+		return anIntersectionOccurred;
+	}
+	
 }
 
 pragma(inline, true) pure @nogc @trusted nothrow
-AABB Prim_ComputeBBox(T)( T* prim )
+AABB Prim_ComputeBBox(T)( const(T)* prim )
 {
 	static assert ( prim.IsPrim, "Did not pass in a valid prim object" );
 
@@ -107,7 +130,7 @@ AABB Prim_ComputeBBox(T)( T* prim )
 
 pragma(inline, true) pure @nogc @trusted nothrow
 IMaterial*
-Prim_GetMaterial( PrimCommon* prim )
+Prim_GetMaterial( const(PrimCommon)* prim )
 {
     PrimType type = prim.GetPrimType();
 
@@ -129,7 +152,7 @@ Prim_GetMaterial( PrimCommon* prim )
 
 pragma(inline, true) pure @nogc @trusted nothrow
 ShapeCommon*
-Prim_GetShape( PrimCommon* prim )
+Prim_GetShape( const(PrimCommon)* prim )
 {
     switch ( prim.GetPrimType() )
 	{
@@ -178,6 +201,10 @@ Prim_GetLight( PrimCommon* prim, Ray* ray, out ScenePrimIntersection primIntx )
 			return emissivePrim.m_light;
 	}
 }
+
+version(none)
+{
+
 
 interface IPrimitive
 {
@@ -310,19 +337,35 @@ class EmissiveSurfacePrim : SurfacePrim
     }
 }
 
+}
 
 /**
     Stores the primitives and lighting infornation.
 */
 struct Scene
 {
-    IAggregatePrim      m_rootPrim;
+    // IAggregatePrim      m_rootPrim;
+	PrimArray           m_rootPrim;
     ILight*[]           m_lights;
 }
 
 bool
 FindClosestIntersection( Scene* scene, in ref Ray ray, out SurfaceInteraction surfIntx )
 {
+    ScenePrimIntersection primIntx;
+	bool intersectionFound = scene.m_rootPrim.ClosestIntersection( &ray, primIntx );
+
+    if ( intersectionFound )
+	{
+	    PrimType primType = primIntx.m_prim_.GetPrimType();
+
+		// TODO:: Get shading info for shape
+
+		// surfIntx.m_prim
+	}
+	
+	// bool intersectionFound = 
+/*
     ScenePrimIntersection primIntx;
     bool intersectionFound = scene.m_rootPrim.IntersectsRay( ray, primIntx );
 
@@ -345,7 +388,7 @@ FindClosestIntersection( Scene* scene, in ref Ray ray, out SurfaceInteraction su
             // TODO:: Medium intersection
         }
     }
-
+*/
     return intersectionFound;
 }
 

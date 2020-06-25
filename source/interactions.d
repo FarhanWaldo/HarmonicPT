@@ -3,7 +3,8 @@ import bsdf;
 import scene;
 import material;
 
-class Interaction
+// class Interaction
+struct Interaction
 {
     vec3    m_pos;
     vec3    m_normal;
@@ -40,8 +41,12 @@ class Interaction
     }
 }
 
-class SurfaceInteraction : Interaction
+// class SurfaceInteraction : Interaction
+struct SurfaceInteraction
 {
+    Interaction m_interaction;
+	alias m_interaction this;
+	
     struct Shading
     {
         vec3    n;
