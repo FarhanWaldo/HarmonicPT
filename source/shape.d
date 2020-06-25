@@ -32,14 +32,14 @@ struct Shape_Sphere
 	
 }
 
-pure @nogc  nothrow
+pure @nogc @trusted nothrow
 AABB Shape_ComputeBBox(T)( T* shape )
 {
     static assert ( T.IsShape, "Did not pass in a type that is a shape" );
 
 	if ( shape.m_shapeType == EShape.Sphere )
 	{
-		Shape_Sphere* sph = cast( Shape_Sphere* ) shape;
+		auto sph = cast( Shape_Sphere* ) shape;
 		return AABB( sph.m_geo.m_centre - vec3( sph.m_geo.m_radius ),
 		             sph.m_geo.m_centre + vec3( sph.m_geo.m_radius ) );
 	}
@@ -50,7 +50,7 @@ AABB Shape_ComputeBBox(T)( T* shape )
 }
 
 
-pure @nogc nothrow
+pure @nogc @trusted nothrow
 bool Shape_IntersectsRay(T)( T* shape, Ray* ray, out IntersectionResult intxRes )
 {
     static assert ( T.IsShape, "Did not pass in a type that is a shape" );
@@ -64,25 +64,23 @@ bool Shape_IntersectsRay(T)( T* shape, Ray* ray, out IntersectionResult intxRes 
 	{
 	    assert( false, "Invalid shape" );
 	}
-
-	return false;
 }
 
 pure @nogc @safe nothrow
 bool Sphere_IntersectsRay( Shape_Sphere* shpSphere, Ray* ray, out IntersectionResult intxRes )
 {
-        float radius = shpSphere.m_geo.m_radius;
-		vec3  centre = shpSphere.m_geo.m_centre;
+        immutable float radius = shpSphere.m_geo.m_radius;
+		immutable vec3  centre = shpSphere.m_geo.m_centre;
 
         bool intersects = false;
         float tMin = Min( ray.m_maxT, intxRes.m_minT );
 
-        vec3 oc = ray.m_origin - centre;
+        immutable vec3 oc = ray.m_origin - centre;
         // Co-efficients of quadratic
-        float a = v_dot( ray.m_dir, ray.m_dir );
-        float b = v_dot( oc, ray.m_dir );
-        float c = v_dot( oc, oc ) - radius * radius;
-        float discriminant = b*b - a*c; // TODO:: Use Kahn's formulae with FMA to increase precision here
+        immutable float a = v_dot( ray.m_dir, ray.m_dir );
+        immutable float b = v_dot( oc, ray.m_dir );
+        immutable float c = v_dot( oc, oc ) - radius * radius;
+        immutable float discriminant = b*b - a*c; // TODO:: Use Kahn's formulae with FMA to increase precision here
 
         if ( discriminant > 0.0f ) 
         {
@@ -120,7 +118,9 @@ bool Sphere_IntersectsRay( Shape_Sphere* shpSphere, Ray* ray, out IntersectionRe
 
 }
 
-
+// version( none )
+version( all )
+{
 /**
     Abstract Base Class for any geometry we want to have ray intersections against.
     Concrete instances of BaseShape should be able to plug into SurfacePrim or EmissiveSurfacePrim
@@ -271,4 +271,6 @@ class ShapeSphere : BaseShape
     {
         // TODO::
     }
+}
+
 }

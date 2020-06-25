@@ -8,15 +8,175 @@ struct ScenePrimIntersection
 {
     IntersectionResult      m_intRes;
     IPrimitive*             m_prim;
+	PrimCommon*             m_prim_;
     IMaterial*              m_material;
 }
 
 enum PrimType
 {
-    kNone,
+    kNone=0,
     kSurface,
     kEmissiveSurface,
     kAggregate
+}
+
+struct PrimCommon
+{
+	PrimType    m_primType;
+	enum        IsPrim = true;
+
+	pure @nogc @safe nothrow
+	PrimType    GetPrimType() { return m_primType; }
+}
+
+struct _SurfacePrim
+{
+	PrimCommon  m_common = { PrimType.kSurface };
+	alias m_common this;
+
+    ShapeCommon* m_shape;
+	IMaterial*   m_material;
+
+	this( ShapeCommon* shape, IMaterial* material )
+	{
+		m_shape     = shape;
+		m_material  = material;
+	}
+}
+
+struct _EmissiveSurfacePrim
+{
+	PrimCommon m_common = { PrimType.kEmissiveSurface };
+	alias m_common this;
+
+	ShapeCommon*     m_shape;
+	IMaterial*       m_material; /// F_TODO:: Do emissive prims have materials? Emissive shaders?	
+	BaseAreaLight*   m_light;
+
+	this( ShapeCommon* shape, IMaterial* material, BaseAreaLight* light )
+	{
+		m_shape     = shape;
+		m_material  = material;
+		m_light     = light;
+	}
+}
+
+struct PrimArray
+{
+	PrimCommon m_common = { PrimType.kAggregate };
+	alias m_common this;
+
+	
+    PrimCommon*[] m_prims;
+
+	this( PrimCommon*[] prims )
+	{
+		m_prims = prims;
+	}
+	
+    enum isAggregatePrim = true;
+	pure @nogc @safe nothrow
+	bool AnyIntersection()
+	{
+		return false;
+	}
+}
+
+pragma(inline, true) pure @nogc @trusted nothrow
+AABB Prim_ComputeBBox(T)( T* prim )
+{
+	static assert ( prim.IsPrim, "Did not pass in a valid prim object" );
+
+	ShapeCommon* shape = void;
+	if ( prim.GetPrimType() == PrimType.kSurface ) {
+	    auto surfPrim = cast( _SurfacePrim* ) prim;
+		shape = surfPrim.m_shape;
+	}
+	else if ( prim.GetPrimType() == PrimType.kEmissiveSurface ) {
+	    auto emissivePrim = cast( _EmissiveSurfacePrim* ) prim;
+		shape = emissivePrim.m_shape;
+	}
+	else {
+	    assert ( false, "Invalid prim type" );
+	}
+
+	return Shape_ComputeBBox( shape );
+}
+
+
+
+pragma(inline, true) pure @nogc @trusted nothrow
+IMaterial*
+Prim_GetMaterial( PrimCommon* prim )
+{
+    PrimType type = prim.GetPrimType();
+
+	switch ( type )
+	{			
+    	case PrimType.kSurface:
+		    auto surfPrim = cast( _SurfacePrim* ) prim;
+		    return surfPrim.m_material;
+
+		case PrimType.kEmissiveSurface:
+		    auto emissivePrim = cast( _EmissiveSurfacePrim* ) prim;
+			return emissivePrim.m_material;
+
+			
+		default:
+		    return null;			
+	}
+}
+
+pragma(inline, true) pure @nogc @trusted nothrow
+ShapeCommon*
+Prim_GetShape( PrimCommon* prim )
+{
+    switch ( prim.GetPrimType() )
+	{
+	    case PrimType.kSurface:
+		    auto surfPrim = cast( _SurfacePrim* ) prim;
+			return surfPrim.m_shape;
+		case PrimType.kEmissiveSurface:
+		    auto emissivePrim = cast( _EmissiveSurfacePrim* ) prim;
+			return emissivePrim.m_shape;
+
+		default:
+		    return null;
+	}
+}
+
+pragma(inline, true) pure @nogc @trusted nothrow
+bool
+Prim_IntersectsRay( PrimCommon* prim, Ray* ray, out ScenePrimIntersection primIntx )
+{
+    ShapeCommon* shape = Prim_GetShape( prim );
+	if ( shape == null ||
+	     !Shape_IntersectsRay( shape, ray, primIntx.m_intRes )) {
+		 return false;
+	}
+
+    //    We have a valid shape and have intersected against the ray (closest intersection)
+	//
+	primIntx.m_material = Prim_GetMaterial( prim );
+	primIntx.m_prim_ = prim;
+	
+	return true;
+}
+
+
+pragma(inline, true) pure @nogc @trusted nothrow
+BaseAreaLight*
+Prim_GetLight( PrimCommon* prim, Ray* ray, out ScenePrimIntersection primIntx )
+{
+	switch ( prim.GetPrimType() )
+	{
+		default:
+			return null;
+
+		case PrimType.kEmissiveSurface:
+		    auto emissivePrim = cast( _EmissiveSurfacePrim* ) prim;
+			return emissivePrim.m_light;
+	}
 }
 
 interface IPrimitive
@@ -92,12 +252,6 @@ class PrimList : IAggregatePrim
     this( IPrimitive[] prims )
     {
         m_prims = prims;
-
-		// foreach( prim; prims )
-	    // {
-		//     import std.stdio;
-		// 	writeln( *((cast( SurfacePrim ) prim).m_shape) );
-		// }
     }
 }
 

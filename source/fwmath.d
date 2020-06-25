@@ -32,11 +32,14 @@ float fw_fma( float a, float b, float c ) @safe pure @nogc nothrow {
 	}
 }
 
+// Compute the product a*b - c*d, where a, b, c, and d are floats
+// This uses fma for increased precision, so catastrophic cancellation can be avoided 
+//
 pragma(inline) @safe pure @nogc nothrow
-T diffOfProducts( T )( T a, T b, T c, T d ) {
-    T cd = c * d;
-	T err = fw_fma( -c, d, cd );
-	T dop = fw_fma( a, b, -cd );
+float diffOfProducts( float a, float b, float c, float d ) {
+    float cd = c * d;
+	float err = fw_fma( -c, d, cd );
+	float dop = fw_fma( a, b, -cd );
 	return dop + err;
 }
 
