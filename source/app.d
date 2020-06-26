@@ -151,6 +151,7 @@ void main( string[] args)
     //  Scene Init
     //
 
+	version (none) {
     scope ShapeSphere shpSphere = new ShapeSphere( vec3(0.0f), 2.0f );
     scope SurfacePrim surfPrim  = new SurfacePrim( cast( BaseShape* ) &shpSphere, cast( IMaterial* ) null ); 
 
@@ -159,7 +160,22 @@ void main( string[] args)
 
     scope PrimList primList     = new PrimList( prims );
     Scene scene                 = Scene( primList, [] );
+    }
 
+
+    Shape_Sphere sph0 = Shape_Sphere( vec3(0.0f), 2.0f );
+    _SurfacePrim prim0 = _SurfacePrim( cast(ShapeCommon*) &sph0, cast(IMaterial*) null );
+
+	// PrimCommon*[] prims;
+	// prims ~= cast(PrimCommon*) &prim0;
+	PrimCommon*[1] prims;
+	prims[0] = cast( PrimCommon* )&prim0;
+
+	PrimArray primList = PrimArray( prims );
+	Scene scene = Scene( primList, [] );
+	
+    
+	
     Camera renderCam;
     Camera_Init( renderCam,
                  vec3( 0.0f, 0.0f, -5.0f ) /* eyePos */,

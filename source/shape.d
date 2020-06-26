@@ -51,13 +51,13 @@ AABB Shape_ComputeBBox(T)( T* shape )
 
 
 pure @nogc @trusted nothrow
-bool Shape_IntersectsRay(T)( T* shape, Ray* ray, out IntersectionResult intxRes )
+bool Shape_IntersectsRay(T)( const(T)* shape, const(Ray)* ray, out IntersectionResult intxRes )
 {
     static assert ( T.IsShape, "Did not pass in a type that is a shape" );
 
 	if ( shape.m_shapeType == EShape.Sphere )
 	{
-		Shape_Sphere* sphere = cast( Shape_Sphere* ) shape;
+		auto sphere = cast( const(Shape_Sphere)* ) shape;
 		return Sphere_IntersectsRay( sphere, ray, intxRes );
 	}
 	else
@@ -67,7 +67,7 @@ bool Shape_IntersectsRay(T)( T* shape, Ray* ray, out IntersectionResult intxRes 
 }
 
 pure @nogc @safe nothrow
-bool Sphere_IntersectsRay( Shape_Sphere* shpSphere, Ray* ray, out IntersectionResult intxRes )
+bool Sphere_IntersectsRay( const(Shape_Sphere)* shpSphere, const(Ray)* ray, out IntersectionResult intxRes )
 {
         immutable float radius = shpSphere.m_geo.m_radius;
 		immutable vec3  centre = shpSphere.m_geo.m_centre;

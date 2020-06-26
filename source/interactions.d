@@ -61,7 +61,8 @@ struct SurfaceInteraction
     Shading         m_shading; // The shading coordinate system
 
     IMaterial*      m_material;
-    IPrimitive*     m_prim;
+    // IPrimitive*     m_prim;
+	const(PrimCommon)*     m_prim_;
     Bsdf*           m_bsdf;
 
     this( in ref vec3 pos, in ref vec2 uv, in ref vec3 n,
@@ -69,7 +70,10 @@ struct SurfaceInteraction
           in ref vec3 dndu, in ref vec3 dndv,
           float time )
     {
-        super( pos, n, time );
+        // super( pos, n, time );
+        m_pos       = pos;
+        m_normal    = n;
+        m_time      = time;		
 
         m_uv = uv;
         m_shading = Shading( n, dpdu, dpdv, dndu, dndv );

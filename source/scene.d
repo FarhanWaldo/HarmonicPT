@@ -7,8 +7,8 @@ import interactions;
 struct ScenePrimIntersection
 {
     IntersectionResult      m_intRes;
-    IPrimitive*             m_prim;
-	PrimCommon*             m_prim_;
+    // IPrimitive*             m_prim;
+	const(PrimCommon)*             m_prim_;
     IMaterial*              m_material;
 }
 
@@ -170,7 +170,7 @@ Prim_GetShape( const(PrimCommon)* prim )
 
 pragma(inline, true) pure @nogc @trusted nothrow
 bool
-Prim_IntersectsRay( PrimCommon* prim, Ray* ray, out ScenePrimIntersection primIntx )
+Prim_IntersectsRay( const(PrimCommon)* prim, const(Ray)* ray, out ScenePrimIntersection primIntx )
 {
     ShapeCommon* shape = Prim_GetShape( prim );
 	if ( shape == null ||
@@ -350,7 +350,7 @@ struct Scene
 }
 
 bool
-FindClosestIntersection( Scene* scene, in ref Ray ray, out SurfaceInteraction surfIntx )
+FindClosestIntersection( const(Scene)* scene, in ref Ray ray, out SurfaceInteraction surfIntx )
 {
     ScenePrimIntersection primIntx;
 	bool intersectionFound = scene.m_rootPrim.ClosestIntersection( &ray, primIntx );
@@ -361,8 +361,15 @@ FindClosestIntersection( Scene* scene, in ref Ray ray, out SurfaceInteraction su
 
 		// TODO:: Get shading info for shape
 
-		// surfIntx.m_prim
+   		surfIntx.m_prim_    = primIntx.m_prim_;
+		surfIntx.m_material = primIntx.m_material;
+		surfIntx.m_wo       = -1 * ray.m_dir;
 	}
+	/* TODO:: MEDIUM INTERACTION
+	else
+	{
+	}
+    */
 	
 	// bool intersectionFound = 
 /*
@@ -393,7 +400,7 @@ FindClosestIntersection( Scene* scene, in ref Ray ray, out SurfaceInteraction su
 }
 
 bool
-FindAnyIntersection( Scene* scene, in ref Ray ray )
+FindAnyIntersection( Scene* scene,  const(Ray)* ray )
 {
     return scene.m_rootPrim.AnyIntersection( ray );
 }
