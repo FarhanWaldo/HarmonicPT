@@ -175,7 +175,7 @@ class WhittedIntegrator : SamplerIntegrator
         IMemAlloc*      memArena,
         int             depth = 0 )
     {
-        vec3                radiance = vec3( 0.0 );
+        vec3                radiance;
         SurfaceInteraction  surfIntx;
 
         if ( scene.FindClosestIntersection(&ray, surfIntx ) )

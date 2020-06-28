@@ -40,7 +40,7 @@ void main( string[] args)
     // StackAlloc  rootMemAlloc = new StackAlloc( rootMemAllocAddress, stackSize );
     IMemAlloc  rootMemAlloc = new StackAlloc( rootMemAllocAddress, stackSize );
 	immutable ulong geoStackSize = MegaBytes( 100 );
-	StackAlloc geoAlloc = new StackAlloc( cast(void*) rootMemAlloc.Allocate( geoStackSize ), geoStackSize );
+	BaseMemAlloc geoAlloc = new StackAlloc( cast(void*) rootMemAlloc.Allocate( geoStackSize ), geoStackSize );
 
     //
     // Set up Render and Display bufferss
@@ -48,7 +48,7 @@ void main( string[] args)
 
 	//	Create an RGB (32 bits per channel) floating point render buffer
 	//
-    auto renderImage = ImageBuffer!float ();
+    auto renderImage = ImageBuffer!float();
     auto imageInfoAlloca = ImageBuffer!float.alloca_t( imageWidth, imageHeight, 3 );
     ImageBuffer_Alloca( &renderImage, imageInfoAlloca, rootMemAlloc.Allocate( imageInfoAlloca.Size() ) );
 
@@ -73,7 +73,7 @@ void main( string[] args)
     scope(exit) SDL_Quit();
 
 	p_sdlWindow = SDL_CreateWindow(
-		"D-Harmonic PT",
+		"Harmonic PT",
 		SDL_WINDOWPOS_UNDEFINED,
 		SDL_WINDOWPOS_UNDEFINED,
 		imageWidth,
@@ -149,17 +149,26 @@ void main( string[] args)
     //
 	IMaterial* nullMtl = null;
 
-	import std.conv : emplace;
+	ShapeCommon* MakeSphere( vec3 centre, float radius )
+	{
+	    import std.conv : emplace;
+		return cast(ShapeCommon*) emplace( geoAlloc.Alloc!ShapeSphere(), centre, radius );
+	}
+	PrimCommon* MakeSurfacePrim( ShapeCommon* shp, IMaterial* mtl )
+	{
+	    import std.conv : emplace;
+		return cast(PrimCommon*) emplace( geoAlloc.Alloc!SurfacePrim(), shp, mtl );
+	}  
+
+	auto sph0 = MakeSphere( vec3( 0.0f ), 1.0f );
+	auto prim0 = MakeSurfacePrim( sph0, nullMtl );
 	
-	auto sph0 = emplace( geoAlloc.Alloc!ShapeSphere(), vec3(0.0f), 1.0f );
-	auto prim0 = emplace( geoAlloc.Alloc!SurfacePrim(), cast(ShapeCommon*) sph0, nullMtl );
-	
-	auto sph1 = emplace( geoAlloc.Alloc!ShapeSphere(), vec3( 0.0f, -1001.0f, 0.0f ), 1000.0f );
-	auto prim1 = emplace( geoAlloc.Alloc!SurfacePrim(), cast(ShapeCommon*) sph1, nullMtl );
-	
-    PrimCommon*[2] prims;
-	prims[0] = cast( PrimCommon* ) prim0;
-	prims[1] = cast( PrimCommon* )&prim1;
+	auto sph1 = MakeSphere( vec3( 0.0f, -1001.0f, 0.0f ), 1000.0f );
+	auto prim1 = MakeSurfacePrim( sph1, nullMtl );
+
+	PrimCommon*[] prims = AllocArray!(PrimCommon*)( &geoAlloc, 2 );
+	prims[0] = prim0;
+	prims[1] = prim1;
 
 	PrimArray primList = PrimArray( prims );
     Scene scene = Scene( primList, [] );       

@@ -30,7 +30,6 @@ class StackAlloc : BaseMemAlloc
     */
     void*   m_memBufferStart;
     void*   m_memBufferEnd;
-    // void[]  m_memBufferRange;
 
     u64     m_offsetFromStart;
 
@@ -39,8 +38,6 @@ class StackAlloc : BaseMemAlloc
         super( stackSizeInBytes );
         m_memBufferStart = startAddress;
         m_memBufferEnd   = m_memBufferStart + stackSizeInBytes;
-        // m_memBufferRange = [ m_memBufferStart .. m_memBufferStart + stackSizeInBytes ];
-
     }
 
     override void
@@ -68,8 +65,15 @@ class StackAlloc : BaseMemAlloc
     }
 }
 
-T[]
-AllocArray( T )( BaseMemAlloc* memAlloc, u64 numElements, u64 alignment= 16 )
+
+pragma(inline,true)
+T* Alloc(T, T_Alloc)( ref T_Alloc alloc )
+{
+	return cast(T*) alloc.Allocate( T.sizeof );
+}
+
+pragma(inline,true)
+T[] AllocArray( T )( BaseMemAlloc* memAlloc, u64 numElements, u64 alignment= 16 )
 {
     return cast( T[] )( memAlloc.Allocate( numElements * T.sizeof , 16 ) );
 }
@@ -111,15 +115,3 @@ u64 MegaBytes( u64 numMegaBytes ) { return numMegaBytes*1000000; }
 @nogc pure @safe nothrow
 u64 KiloBytes( u64 numKiloBytes ) { return numKiloBytes*1000; }
 
-
-pragma(inline,true)
-T* Alloc(T, T_Alloc)( ref T_Alloc alloc )
-{
-	return cast(T*) alloc.Allocate( T.sizeof );
-}
-
-pragma(inline, true)
-T[] AllocArray(T, T_Alloc)( ref T_Alloc alloc, ulong numElements )
-{
-	return cast(T[]) alloc.Allocate( T.sizeof * numElements );
-}
