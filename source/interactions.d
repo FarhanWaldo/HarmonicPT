@@ -3,7 +3,6 @@ import bsdf;
 import scene;
 import material;
 
-// class Interaction
 struct Interaction
 {
     vec3    m_pos;
@@ -41,7 +40,6 @@ struct Interaction
     }
 }
 
-// class SurfaceInteraction : Interaction
 struct SurfaceInteraction
 {
     Interaction m_interaction;
@@ -60,17 +58,15 @@ struct SurfaceInteraction
 
     Shading         m_shading; // The shading coordinate system
 
-    IMaterial*      m_material;
-    // IPrimitive*     m_prim;
-	const(PrimCommon)*     m_prim_;
-    Bsdf*           m_bsdf;
+    IMaterial*        m_material;
+    CPrimCommon*      m_prim;
+    Bsdf*             m_bsdf;
 
     this( in ref vec3 pos, in ref vec2 uv, in ref vec3 n,
           in ref vec3 dpdu, in ref vec3 dpdv,
           in ref vec3 dndu, in ref vec3 dndv,
           float time )
     {
-        // super( pos, n, time );
         m_pos       = pos;
         m_normal    = n;
         m_time      = time;		

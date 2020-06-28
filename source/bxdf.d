@@ -82,7 +82,7 @@ pure vec3 Reflect( in vec3 wo, in vec3 n ) {
 }
 
 pure bool
-Refract( in vec3 wi, in vec3 n, float eta, out vec3 o_wt )
+Refract( in vec3 wi, in vec3 n, float eta, ref vec3 o_wt )
 {
     float cosThetaI = v_dot( n, wi );
 	float sin2ThetaI = Max( 0.0f, 1.0f - cosThetaI * cosThetaI );
@@ -152,8 +152,8 @@ abstract class BaseBxDF
 	Sample_F(
 	    in vec3     wo,    
 		in vec2     u,
-		out vec3    o_wi,
-		out float   o_pdf,
+		ref vec3    o_wi,
+	    float*      o_pdf,
 		BxDFType*   o_sampledType = null );
 
 	/**

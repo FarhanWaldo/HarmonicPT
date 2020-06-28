@@ -22,11 +22,6 @@ void main( string[] args)
 {
     // Disable the garbage collector
     // GC.disable;
-
-    Shape_Sphere sph = Shape_Sphere( vec3( 0.0f, 1.0f, 0.0f ), 10.0f );
-    writeln( sph );
-	ShapeCommon* sh = cast( ShapeCommon* ) &sph;
-	writeln( Shape_ComputeBBox( sh ) );
 	
     uint imageWidth 	= 640;
     uint imageHeight 	= 480;
@@ -152,37 +147,29 @@ void main( string[] args)
     //
 
 	version (none) {
-    scope ShapeSphere shpSphere = new ShapeSphere( vec3(0.0f), 2.0f );
-    scope SurfacePrim surfPrim  = new SurfacePrim( cast( BaseShape* ) &shpSphere, cast( IMaterial* ) null ); 
+		scope ShapeSphere shpSphere = new ShapeSphere( vec3(0.0f), 2.0f );
+		scope SurfacePrim surfPrim  = new SurfacePrim( cast( BaseShape* ) &shpSphere, cast( IMaterial* ) null ); 
 
-    scope IPrimitive[] prims;
-    prims ~= surfPrim;
+		scope IPrimitive[] prims;
+		prims ~= surfPrim;
 
-    scope PrimList primList     = new PrimList( prims );
-    Scene scene                 = Scene( primList, [] );
-    }
+		scope PrimList primList     = new PrimList( prims );
+		Scene scene                 = Scene( primList, [] );
+	}
 
 
-    Shape_Sphere sph0 = Shape_Sphere( vec3(0.0f), 1.0f );
-    _SurfacePrim prim0 = _SurfacePrim( cast(ShapeCommon*) &sph0, cast(IMaterial*) null );
+    auto sph0 = ShapeSphere( vec3(0.0f), 1.0f );
+    auto prim0 = SurfacePrim( cast(ShapeCommon*) &sph0, cast(IMaterial*) null );
 
-    Shape_Sphere sph1 = Shape_Sphere( vec3(0.0f, -1001.0f, 0.0f), 1000.0f );
-    _SurfacePrim prim1 = _SurfacePrim( cast(ShapeCommon*) &sph1, cast(IMaterial*) null );
+    auto sph1 = ShapeSphere( vec3(0.0f, -1001.0f, 0.0f), 1000.0f );
+    auto prim1 = SurfacePrim( cast(ShapeCommon*) &sph1, cast(IMaterial*) null );
 	
 	PrimCommon*[2] prims;
 	prims[0] = cast( PrimCommon* )&prim0;
 	prims[1] = cast( PrimCommon* )&prim1;
 
-	foreach (prim; prims)
-		{
-			writeln(prim);
-			
-		}
-	
 	PrimArray primList = PrimArray( prims );
-	Scene scene = Scene( primList, [] );
-	
-    
+	Scene scene = Scene( primList, [] );       
 	
     Camera renderCam;
     Camera_Init( renderCam,

@@ -807,8 +807,8 @@ pure @nogc @safe nothrow
 void
 CreateCoordSystem( T )(
     auto ref VecT!(T,3) e0,
-    out VecT!(T,3) e1,
-    out VecT!(T,3) e2 
+    ref Vec3T!(T) e1,
+    ref Vec3T!(T) e2 
 )
 {
     if ( Abs( e0.x ) > Abs( e0.y ) )
