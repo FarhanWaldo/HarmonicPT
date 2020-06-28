@@ -17,6 +17,8 @@ abstract class BaseMemAlloc
     const pure u64 GetNumUnallocatedBytes() { return m_memCapacityBytes - m_memAllocatedBytes; }
 
     void    Reset();
+
+	@nogc nothrow @trusted
     void[]   Allocate( u64 bytesRequested, u64 alignment = 16);
 }
 
@@ -48,6 +50,7 @@ class StackAlloc : BaseMemAlloc
         m_memAllocatedBytes = 0;
     }
 
+	@nogc nothrow @trusted
     override void[]
     Allocate( u64 bytesRequested, u64 alignment = 16 )
     {
@@ -71,7 +74,7 @@ AllocArray( T )( BaseMemAlloc* memAlloc, u64 numElements, u64 alignment= 16 )
     return cast( T[] )( memAlloc.Allocate( numElements * T.sizeof , 16 ) );
 }
 
-@nogc pure void*
+@nogc pure nothrow void*
 AlignAddress( void* address, u64 alignment = 16 )
 {
     const u64 alignSub1 = alignment - 1;
@@ -103,5 +106,20 @@ CAlignedFree( void* ptr )
     free( actualAddress );
 }
 
-@nogc pure u64 MegaBytes( u64 numMegaBytes ) { return numMegaBytes*1000000; }
-@nogc pure u64 KiloBytes( u64 numKiloBytes ) { return numKiloBytes*1000; }
+@nogc pure @safe nothrow
+u64 MegaBytes( u64 numMegaBytes ) { return numMegaBytes*1000000; }
+@nogc pure @safe nothrow
+u64 KiloBytes( u64 numKiloBytes ) { return numKiloBytes*1000; }
+
+
+pragma(inline,true)
+T* Alloc(T, T_Alloc)( ref T_Alloc alloc )
+{
+	return cast(T*) alloc.Allocate( T.sizeof );
+}
+
+pragma(inline, true)
+T[] AllocArray(T, T_Alloc)( ref T_Alloc alloc, ulong numElements )
+{
+	return cast(T[]) alloc.Allocate( T.sizeof * numElements );
+}

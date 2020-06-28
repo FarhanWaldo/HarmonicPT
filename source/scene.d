@@ -175,7 +175,7 @@ pragma(inline, true) pure @nogc @trusted nothrow
 bool
 Prim_IntersectsRay( const(PrimCommon)* prim, const(Ray)* ray, ref ScenePrimIntersection primIntx )
 {
-    ShapeCommon* shape = Prim_GetShape( prim );
+    ShapeCommon* shape = prim.Prim_GetShape();
 	if ( shape == null ||
 	     !Shape_IntersectsRay( shape, ray, primIntx.m_intRes )) {
 		 return false;
@@ -191,8 +191,7 @@ Prim_IntersectsRay( const(PrimCommon)* prim, const(Ray)* ray, ref ScenePrimInter
 
 
 pragma(inline, true) pure @nogc @trusted nothrow
-BaseAreaLight*
-Prim_GetLight( PrimCommon* prim, Ray* ray, ref ScenePrimIntersection primIntx )
+BaseAreaLight* Prim_GetLight( PrimCommon* prim, Ray* ray, ref ScenePrimIntersection primIntx )
 {
 	switch ( prim.GetPrimType() )
 	{
@@ -211,16 +210,15 @@ Prim_GetLight( PrimCommon* prim, Ray* ray, ref ScenePrimIntersection primIntx )
 */
 struct Scene
 {
-    // IAggregatePrim      m_rootPrim;
 	PrimArray           m_rootPrim;
     ILight*[]           m_lights;
 }
 
-bool
-FindClosestIntersection( const(Scene)* scene, in ref Ray ray, ref SurfaceInteraction surfIntx )
+pure @nogc @safe nothrow
+bool FindClosestIntersection( const(Scene)* scene, const(Ray)* ray, ref SurfaceInteraction surfIntx )
 {
     ScenePrimIntersection primIntx;
-	bool intersectionFound = scene.m_rootPrim.ClosestIntersection( &ray, primIntx );
+	bool intersectionFound = scene.m_rootPrim.ClosestIntersection( ray, primIntx );
 
     if ( intersectionFound )
 	{
@@ -238,36 +236,11 @@ FindClosestIntersection( const(Scene)* scene, in ref Ray ray, ref SurfaceInterac
 	}
     */
 	
-	// bool intersectionFound = 
-/*
-    ScenePrimIntersection primIntx;
-    bool intersectionFound = scene.m_rootPrim.IntersectsRay( ray, primIntx );
-
-    if ( intersectionFound )
-    {
-        if ( is( typeof( primIntx.m_prim ) == SurfacePrim ) )
-        {
-            const BaseShape* shape = ( cast( SurfacePrim* )primIntx.m_prim ).GetShape();
-            if ( shape != null )
-            {
-                shape.GetShadingInfo(  primIntx.m_intRes, surfIntx );
-            }
-
-            surfIntx.m_prim         = primIntx.m_prim;
-            surfIntx.m_material     = primIntx.m_material;
-            surfIntx.m_wo           = -1.0f * ray.m_dir;
-        }
-        else
-        {
-            // TODO:: Medium intersection
-        }
-    }
-*/
     return intersectionFound;
 }
 
-bool
-FindAnyIntersection( Scene* scene,  const(Ray)* ray )
+pure @nogc @safe nothrow
+bool FindAnyIntersection( Scene* scene,  const(Ray)* ray )
 {
     return scene.m_rootPrim.AnyIntersection( ray );
 }

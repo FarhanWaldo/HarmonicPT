@@ -39,6 +39,8 @@ void main( string[] args)
     scope(exit) CAlignedFree( rootMemAllocAddress );
     // StackAlloc  rootMemAlloc = new StackAlloc( rootMemAllocAddress, stackSize );
     IMemAlloc  rootMemAlloc = new StackAlloc( rootMemAllocAddress, stackSize );
+	immutable ulong geoStackSize = MegaBytes( 100 );
+	StackAlloc geoAlloc = new StackAlloc( cast(void*) rootMemAlloc.Allocate( geoStackSize ), geoStackSize );
 
     //
     // Set up Render and Display bufferss
@@ -145,31 +147,22 @@ void main( string[] args)
     //
     //  Scene Init
     //
+	IMaterial* nullMtl = null;
 
-	version (none) {
-		scope ShapeSphere shpSphere = new ShapeSphere( vec3(0.0f), 2.0f );
-		scope SurfacePrim surfPrim  = new SurfacePrim( cast( BaseShape* ) &shpSphere, cast( IMaterial* ) null ); 
-
-		scope IPrimitive[] prims;
-		prims ~= surfPrim;
-
-		scope PrimList primList     = new PrimList( prims );
-		Scene scene                 = Scene( primList, [] );
-	}
-
-
-    auto sph0 = ShapeSphere( vec3(0.0f), 1.0f );
-    auto prim0 = SurfacePrim( cast(ShapeCommon*) &sph0, cast(IMaterial*) null );
-
-    auto sph1 = ShapeSphere( vec3(0.0f, -1001.0f, 0.0f), 1000.0f );
-    auto prim1 = SurfacePrim( cast(ShapeCommon*) &sph1, cast(IMaterial*) null );
+	import std.conv : emplace;
 	
-	PrimCommon*[2] prims;
-	prims[0] = cast( PrimCommon* )&prim0;
+	auto sph0 = emplace( geoAlloc.Alloc!ShapeSphere(), vec3(0.0f), 1.0f );
+	auto prim0 = emplace( geoAlloc.Alloc!SurfacePrim(), cast(ShapeCommon*) sph0, nullMtl );
+	
+	auto sph1 = emplace( geoAlloc.Alloc!ShapeSphere(), vec3( 0.0f, -1001.0f, 0.0f ), 1000.0f );
+	auto prim1 = emplace( geoAlloc.Alloc!SurfacePrim(), cast(ShapeCommon*) sph1, nullMtl );
+	
+    PrimCommon*[2] prims;
+	prims[0] = cast( PrimCommon* ) prim0;
 	prims[1] = cast( PrimCommon* )&prim1;
 
 	PrimArray primList = PrimArray( prims );
-	Scene scene = Scene( primList, [] );       
+    Scene scene = Scene( primList, [] );       
 	
     Camera renderCam;
     Camera_Init( renderCam,
