@@ -44,7 +44,7 @@ SpawnRay(
     in ref Camera pCamera,
     in ref vec2 pixelCoord,
     in ref vec2 windowSize,
-    out Ray ray )
+    ref Ray ray )
 {
     float halfHeight = float( tan( pCamera.m_vertFoV / 2.0f ) );
     float halfWidth  = halfHeight * pCamera.m_aspectRatio;

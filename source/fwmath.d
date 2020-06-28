@@ -32,11 +32,14 @@ float fw_fma( float a, float b, float c ) @safe pure @nogc nothrow {
 	}
 }
 
+// Compute the product a*b - c*d, where a, b, c, and d are floats
+// This uses fma for increased precision, so catastrophic cancellation can be avoided 
+//
 pragma(inline) @safe pure @nogc nothrow
-T diffOfProducts( T )( T a, T b, T c, T d ) {
-    T cd = c * d;
-	T err = fw_fma( -c, d, cd );
-	T dop = fw_fma( a, b, -cd );
+float diffOfProducts( float a, float b, float c, float d ) {
+    float cd = c * d;
+	float err = fw_fma( -c, d, cd );
+	float dop = fw_fma( a, b, -cd );
 	return dop + err;
 }
 
@@ -804,8 +807,8 @@ pure @nogc @safe nothrow
 void
 CreateCoordSystem( T )(
     auto ref VecT!(T,3) e0,
-    out VecT!(T,3) e1,
-    out VecT!(T,3) e2 
+    ref Vec3T!(T) e1,
+    ref Vec3T!(T) e2 
 )
 {
     if ( Abs( e0.x ) > Abs( e0.y ) )

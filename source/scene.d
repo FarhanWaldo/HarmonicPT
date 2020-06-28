@@ -4,156 +4,204 @@ import light;
 import shape;
 import interactions;
 
+alias const(PrimCommon)  CPrimCommon;
+
 struct ScenePrimIntersection
 {
     IntersectionResult      m_intRes;
-    IPrimitive*             m_prim;
+    // IPrimitive*             m_prim;
+    CPrimCommon*            m_prim;
     IMaterial*              m_material;
 }
 
 enum PrimType
 {
-    kNone,
+    kNone=0,
     kSurface,
     kEmissiveSurface,
     kAggregate
 }
 
-interface IPrimitive
+struct PrimCommon
 {
-    PrimType GetPrimType(); // Probably better just to have a member for this
+	PrimType    m_primType;
+	enum        IsPrim = true;
 
-    AABB ComputeBBox();
-
-    /**
-        Computes whether this primitive has the closest intersection with the ray computed so far
-    */
-    bool IntersectsRay( in ref Ray, out ScenePrimIntersection );
-
-    // F_TODO:: Should this be in the interface?
-    IMaterial* GetMaterial();
+	pure const @nogc @safe nothrow
+	PrimType    GetPrimType() { return m_primType; }
 }
 
-/**
-    This interface is a useful abstraction for building acceleration structures over
-    the entire scene's primitives.
-*/
-interface IAggregatePrim : IPrimitive
+struct SurfacePrim
 {
-    /**
-        Returns whether the ray intersections any prims at all, useful for occlusion queries
-    */
-    bool AnyIntersection( in ref Ray );
+	PrimCommon  m_common = { PrimType.kSurface };
+	alias m_common this;
+
+    ShapeCommon* m_shape;
+	IMaterial*   m_material;
+
+	this( ShapeCommon* shape, IMaterial* material )
+	{
+	    m_common.m_primType  = PrimType.kSurface;
+		m_shape     = shape;
+		m_material  = material;
+	}
 }
 
-/**
-    A flat array of primitives. No acceleration behind this acceleration structure...
-    a brute force linear search
-*/
-class PrimList : IAggregatePrim
+struct EmissiveSurfacePrim
 {
-    IPrimitive[]       m_prims;
+	PrimCommon m_common = { PrimType.kEmissiveSurface };
+	alias m_common this;
 
-    // TODO:: Is this even necessary with runtime type info?
-    override PrimType   GetPrimType() { return PrimType.kAggregate; }
-    override AABB       ComputeBBox() { return AABB(); }
-    override IMaterial* GetMaterial() { return null; }
+	ShapeCommon*     m_shape;
+	IMaterial*       m_material; /// F_TODO:: Do emissive prims have materials? Emissive shaders?	
+	BaseAreaLight*   m_light;
 
-    override bool
-    IntersectsRay( in ref Ray ray, out ScenePrimIntersection scenePrimIntx )
-    {
-        bool intersectionOccurred = false;
+	this( ShapeCommon* shape, IMaterial* material, BaseAreaLight* light )
+	{
+		m_shape     = shape;
+		m_material  = material;
+		m_light     = light;
+	}
+}
+
+struct PrimArray
+{
+	PrimCommon m_common = { PrimType.kAggregate };
+	alias m_common this;
+
+	
+    PrimCommon*[] m_prims;
+
+	this( PrimCommon*[] prims )
+	{
+		m_prims = prims;
+	}
+	
+    enum isAggregatePrim = true;
+	pure const @nogc @safe nothrow
+	bool AnyIntersection( const(Ray)* ray )
+	{
+		ScenePrimIntersection primIntx;
+
+		foreach ( prim; m_prims )
+		{
+		    if ( Prim_IntersectsRay( prim, ray, primIntx ) ) {
+			    return true;
+			}
+		}
+
+		return false;
+	}
+
+	pure const @nogc @safe nothrow
+	bool ClosestIntersection( const(Ray)* ray, ref ScenePrimIntersection scenePrimIntx )
+	{
+	    bool anIntersectionOccurred = false;
 
         foreach ( prim; m_prims )
-        {
-            intersectionOccurred |= prim.IntersectsRay( ray, scenePrimIntx );
-        }
-
-
-        return intersectionOccurred;
-    }
-
-    override bool
-    AnyIntersection( in ref Ray ray )
-    {
-        ScenePrimIntersection primIntx;
-
-        foreach ( prim; m_prims )
-        {
-            if ( prim.IntersectsRay( ray, primIntx ) )
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    this( IPrimitive[] prims )
-    {
-        m_prims = prims;
-
-		// foreach( prim; prims )
-	    // {
-		//     import std.stdio;
-		// 	writeln( *((cast( SurfacePrim ) prim).m_shape) );
-		// }
-    }
+		{
+		    anIntersectionOccurred |= Prim_IntersectsRay( prim, ray, scenePrimIntx );
+		}
+		
+		return anIntersectionOccurred;
+	}
+	
 }
 
-/**
-    Represents any surface boundary in the world, and can have a material attached.
-    The material will describe the scattering properties of the surface represented by the prim.
-
-    This surface CANNOT be emissive. Use EmissiveSurfacePrim for that (usually area lights).
-*/
-class SurfacePrim : IPrimitive
+pragma(inline, true) pure @nogc @trusted nothrow
+AABB Prim_ComputeBBox(T)( const(T)* prim )
 {
-    BaseShape*  m_shape;
-    IMaterial*  m_material;
+	static assert ( prim.IsPrim, "Did not pass in a valid prim object" );
 
-    PrimType    GetPrimType() { return PrimType.kSurface; }
-    AABB        ComputeBBox() { return m_shape.ComputeBBox(); }
-    IMaterial*  GetMaterial() { return m_material; }
+	ShapeCommon* shape = void;
+	if ( prim.GetPrimType() == PrimType.kSurface ) {
+	    auto surfPrim = cast( SurfacePrim* ) prim;
+		shape = surfPrim.m_shape;
+	}
+	else if ( prim.GetPrimType() == PrimType.kEmissiveSurface ) {
+	    auto emissivePrim = cast( EmissiveSurfacePrim* ) prim;
+		shape = emissivePrim.m_shape;
+	}
+	else {
+	    assert ( false, "Invalid prim type" );
+	}
 
-    BaseShape*  GetShape() { return m_shape; }
-
-    override bool
-    IntersectsRay( in ref Ray ray, out ScenePrimIntersection primInt )
-    {
-        if ( m_shape.IntersectsRay( ray, primInt.m_intRes ) )
-        {
-            primInt.m_material = m_material;
-            primInt.m_prim = cast( IPrimitive* ) this;
-
-            return true;
-        }
-
-        return false;
-    }
-
-    this( BaseShape* shape, IMaterial* material )
-    {
-        m_shape = shape;
-        m_material = material;
-    }
+	return Shape_ComputeBBox( shape );
 }
 
-/**
-    Used to represent a surface boundary that emits light in the upper hemisphere oriented around its normal.
-*/
-class EmissiveSurfacePrim : SurfacePrim
+
+
+pragma(inline, true) pure @nogc @trusted nothrow
+IMaterial*
+Prim_GetMaterial( const(PrimCommon)* prim )
 {
-    BaseAreaLight*          m_areaLight;
+    PrimType type = prim.GetPrimType();
 
-    final BaseAreaLight*    GetAreaLight() { return m_areaLight; }
-    override PrimType       GetPrimType()  { return PrimType.kEmissiveSurface; }
+	switch ( type )
+	{			
+    	case PrimType.kSurface:
+		    auto surfPrim = cast( SurfacePrim* ) prim;
+		    return surfPrim.m_material;
 
-    this( BaseShape* shape, IMaterial* material, BaseAreaLight* areaLight )
-    {
-        super( shape, material );
-        m_areaLight = areaLight;
-    }
+		case PrimType.kEmissiveSurface:
+		    auto emissivePrim = cast( EmissiveSurfacePrim* ) prim;
+			return emissivePrim.m_material;
+
+			
+		default:
+		    return null;			
+	}
+}
+
+pragma(inline, true) pure @nogc @trusted nothrow
+ShapeCommon*
+Prim_GetShape( const(PrimCommon)* prim )
+{
+    switch ( prim.GetPrimType() )
+	{
+	    case PrimType.kSurface:
+		    auto surfPrim = cast( SurfacePrim* ) prim;
+			return surfPrim.m_shape;
+		case PrimType.kEmissiveSurface:
+		    auto emissivePrim = cast( EmissiveSurfacePrim* ) prim;
+			return emissivePrim.m_shape;
+
+		default:
+		    return null;
+	}
+}
+
+pragma(inline, true) pure @nogc @trusted nothrow
+bool
+Prim_IntersectsRay( const(PrimCommon)* prim, const(Ray)* ray, ref ScenePrimIntersection primIntx )
+{
+    ShapeCommon* shape = prim.Prim_GetShape();
+	if ( shape == null ||
+	     !Shape_IntersectsRay( shape, ray, primIntx.m_intRes )) {
+		 return false;
+	}
+
+    //    We have a valid shape and have intersected against the ray (closest intersection)
+	//
+	primIntx.m_material = Prim_GetMaterial( prim );
+	primIntx.m_prim = prim;
+	
+	return true;
+}
+
+
+pragma(inline, true) pure @nogc @trusted nothrow
+BaseAreaLight* Prim_GetLight( PrimCommon* prim, Ray* ray, ref ScenePrimIntersection primIntx )
+{
+	switch ( prim.GetPrimType() )
+	{
+		default:
+			return null;
+
+		case PrimType.kEmissiveSurface:
+		    auto emissivePrim = cast( EmissiveSurfacePrim* ) prim;
+			return emissivePrim.m_light;
+	}
 }
 
 
@@ -162,41 +210,37 @@ class EmissiveSurfacePrim : SurfacePrim
 */
 struct Scene
 {
-    IAggregatePrim      m_rootPrim;
+	PrimArray           m_rootPrim;
     ILight*[]           m_lights;
 }
 
-bool
-FindClosestIntersection( Scene* scene, in ref Ray ray, out SurfaceInteraction surfIntx )
+pure @nogc @safe nothrow
+bool FindClosestIntersection( const(Scene)* scene, const(Ray)* ray, ref SurfaceInteraction surfIntx )
 {
     ScenePrimIntersection primIntx;
-    bool intersectionFound = scene.m_rootPrim.IntersectsRay( ray, primIntx );
+	bool intersectionFound = scene.m_rootPrim.ClosestIntersection( ray, primIntx );
 
     if ( intersectionFound )
-    {
-        if ( is( typeof( primIntx.m_prim ) == SurfacePrim ) )
-        {
-            const BaseShape* shape = ( cast( SurfacePrim* )primIntx.m_prim ).GetShape();
-            if ( shape != null )
-            {
-                shape.GetShadingInfo(  primIntx.m_intRes, surfIntx );
-            }
+	{
+	    PrimType primType = primIntx.m_prim.GetPrimType();
 
-            surfIntx.m_prim         = primIntx.m_prim;
-            surfIntx.m_material     = primIntx.m_material;
-            surfIntx.m_wo           = -1.0f * ray.m_dir;
-        }
-        else
-        {
-            // TODO:: Medium intersection
-        }
-    }
+		// TODO:: Get shading info for shape
 
+   		surfIntx.m_prim     = primIntx.m_prim;
+		surfIntx.m_material = primIntx.m_material;
+		surfIntx.m_wo       = -1 * ray.m_dir;
+	}
+	/* TODO:: MEDIUM INTERACTION
+	else
+	{
+	}
+    */
+	
     return intersectionFound;
 }
 
-bool
-FindAnyIntersection( Scene* scene, in ref Ray ray )
+pure @nogc @safe nothrow
+bool FindAnyIntersection( Scene* scene,  const(Ray)* ray )
 {
     return scene.m_rootPrim.AnyIntersection( ray );
 }

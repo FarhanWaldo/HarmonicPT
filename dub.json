@@ -27,5 +27,6 @@
 	"targetPath": "bin/",
 	"targetType": "executable",
 	"versions": ["DerelictSDL2_Static"],
-	"stringImportPaths": ["tables"]
+	"stringImportPaths": ["tables"],
+	"dflags": ["-gf"],
 }

@@ -22,7 +22,7 @@ void main( string[] args)
 {
     // Disable the garbage collector
     // GC.disable;
-
+	
     uint imageWidth 	= 640;
     uint imageHeight 	= 480;
 
@@ -39,6 +39,8 @@ void main( string[] args)
     scope(exit) CAlignedFree( rootMemAllocAddress );
     // StackAlloc  rootMemAlloc = new StackAlloc( rootMemAllocAddress, stackSize );
     IMemAlloc  rootMemAlloc = new StackAlloc( rootMemAllocAddress, stackSize );
+	immutable ulong geoStackSize = MegaBytes( 100 );
+	StackAlloc geoAlloc = new StackAlloc( cast(void*) rootMemAlloc.Allocate( geoStackSize ), geoStackSize );
 
     //
     // Set up Render and Display bufferss
@@ -145,16 +147,23 @@ void main( string[] args)
     //
     //  Scene Init
     //
+	IMaterial* nullMtl = null;
 
-    scope ShapeSphere shpSphere = new ShapeSphere( vec3(0.0f), 2.0f );
-    scope SurfacePrim surfPrim  = new SurfacePrim( cast( BaseShape* ) &shpSphere, cast( IMaterial* ) null ); 
+	import std.conv : emplace;
+	
+	auto sph0 = emplace( geoAlloc.Alloc!ShapeSphere(), vec3(0.0f), 1.0f );
+	auto prim0 = emplace( geoAlloc.Alloc!SurfacePrim(), cast(ShapeCommon*) sph0, nullMtl );
+	
+	auto sph1 = emplace( geoAlloc.Alloc!ShapeSphere(), vec3( 0.0f, -1001.0f, 0.0f ), 1000.0f );
+	auto prim1 = emplace( geoAlloc.Alloc!SurfacePrim(), cast(ShapeCommon*) sph1, nullMtl );
+	
+    PrimCommon*[2] prims;
+	prims[0] = cast( PrimCommon* ) prim0;
+	prims[1] = cast( PrimCommon* )&prim1;
 
-    scope IPrimitive[] prims;
-    prims ~= surfPrim;
-
-    scope PrimList primList     = new PrimList( prims );
-    Scene scene                 = Scene( primList, [] );
-
+	PrimArray primList = PrimArray( prims );
+    Scene scene = Scene( primList, [] );       
+	
     Camera renderCam;
     Camera_Init( renderCam,
                  vec3( 0.0f, 0.0f, -5.0f ) /* eyePos */,

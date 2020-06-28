@@ -178,8 +178,7 @@ class WhittedIntegrator : SamplerIntegrator
         vec3                radiance = vec3( 0.0 );
         SurfaceInteraction  surfIntx;
 
-        if ( scene.FindClosestIntersection(ray, surfIntx ) )
-        // if ( scene.FindAnyIntersection( ray ) )
+        if ( scene.FindClosestIntersection(&ray, surfIntx ) )
         {
             radiance = vec3( 1.0 );
         }
