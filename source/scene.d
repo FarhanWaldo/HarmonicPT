@@ -39,6 +39,7 @@ struct _SurfacePrim
 
 	this( ShapeCommon* shape, IMaterial* material )
 	{
+	    m_common.m_primType  = PrimType.kSurface;
 		m_shape     = shape;
 		m_material  = material;
 	}
@@ -91,7 +92,7 @@ struct PrimArray
 	}
 
 	pure const @nogc @safe nothrow
-	bool ClosestIntersection( const(Ray)* ray, out ScenePrimIntersection scenePrimIntx )
+	bool ClosestIntersection( const(Ray)* ray, ref ScenePrimIntersection scenePrimIntx )
 	{
 	    bool anIntersectionOccurred = false;
 
@@ -170,7 +171,7 @@ Prim_GetShape( const(PrimCommon)* prim )
 
 pragma(inline, true) pure @nogc @trusted nothrow
 bool
-Prim_IntersectsRay( const(PrimCommon)* prim, const(Ray)* ray, out ScenePrimIntersection primIntx )
+Prim_IntersectsRay( const(PrimCommon)* prim, const(Ray)* ray, ref ScenePrimIntersection primIntx )
 {
     ShapeCommon* shape = Prim_GetShape( prim );
 	if ( shape == null ||
@@ -189,7 +190,7 @@ Prim_IntersectsRay( const(PrimCommon)* prim, const(Ray)* ray, out ScenePrimInter
 
 pragma(inline, true) pure @nogc @trusted nothrow
 BaseAreaLight*
-Prim_GetLight( PrimCommon* prim, Ray* ray, out ScenePrimIntersection primIntx )
+Prim_GetLight( PrimCommon* prim, Ray* ray, ref ScenePrimIntersection primIntx )
 {
 	switch ( prim.GetPrimType() )
 	{
@@ -215,7 +216,7 @@ interface IPrimitive
     /**
         Computes whether this primitive has the closest intersection with the ray computed so far
     */
-    bool IntersectsRay( in ref Ray, out ScenePrimIntersection );
+    bool IntersectsRay( in ref Ray, ref ScenePrimIntersection );
 
     // F_TODO:: Should this be in the interface?
     IMaterial* GetMaterial();
@@ -300,7 +301,7 @@ class SurfacePrim : IPrimitive
     BaseShape*  GetShape() { return m_shape; }
 
     override bool
-    IntersectsRay( in ref Ray ray, out ScenePrimIntersection primInt )
+    IntersectsRay( in ref Ray ray, ref ScenePrimIntersection primInt )
     {
         if ( m_shape.IntersectsRay( ray, primInt.m_intRes ) )
         {
@@ -350,7 +351,7 @@ struct Scene
 }
 
 bool
-FindClosestIntersection( const(Scene)* scene, in ref Ray ray, out SurfaceInteraction surfIntx )
+FindClosestIntersection( const(Scene)* scene, in ref Ray ray, ref SurfaceInteraction surfIntx )
 {
     ScenePrimIntersection primIntx;
 	bool intersectionFound = scene.m_rootPrim.ClosestIntersection( &ray, primIntx );

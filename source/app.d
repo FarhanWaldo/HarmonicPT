@@ -163,14 +163,22 @@ void main( string[] args)
     }
 
 
-    Shape_Sphere sph0 = Shape_Sphere( vec3(0.0f), 2.0f );
+    Shape_Sphere sph0 = Shape_Sphere( vec3(0.0f), 1.0f );
     _SurfacePrim prim0 = _SurfacePrim( cast(ShapeCommon*) &sph0, cast(IMaterial*) null );
 
-	// PrimCommon*[] prims;
-	// prims ~= cast(PrimCommon*) &prim0;
-	PrimCommon*[1] prims;
+    Shape_Sphere sph1 = Shape_Sphere( vec3(0.0f, -1001.0f, 0.0f), 1000.0f );
+    _SurfacePrim prim1 = _SurfacePrim( cast(ShapeCommon*) &sph1, cast(IMaterial*) null );
+	
+	PrimCommon*[2] prims;
 	prims[0] = cast( PrimCommon* )&prim0;
+	prims[1] = cast( PrimCommon* )&prim1;
 
+	foreach (prim; prims)
+		{
+			writeln(prim);
+			
+		}
+	
 	PrimArray primList = PrimArray( prims );
 	Scene scene = Scene( primList, [] );
 	
