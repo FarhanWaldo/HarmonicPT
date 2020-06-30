@@ -166,11 +166,13 @@ void main( string[] args)
 	auto sph1 = MakeSphere( vec3( 0.0f, -1001.0f, 0.0f ), 1000.0f );
 	auto prim1 = MakeSurfacePrim( sph1, nullMtl );
 
-	PrimCommon*[] prims = AllocArray!(PrimCommon*)( &geoAlloc, 2 );
-	prims[0] = prim0;
-	prims[1] = prim1;
+	import datastructures;
+	// auto prims = CreateBuffer!(PrimCommon*)( geoAlloc, 256 );
+	auto primBuffer = BufferT!( PrimCommon*, 512 )();
+	primBuffer.Push( prim0 );
+	primBuffer.Push( prim1 );
 
-	PrimArray primList = PrimArray( prims );
+	PrimArray primList = PrimArray( primBuffer.range() );
     Scene scene = Scene( primList, [] );       
 	
     Camera renderCam;
