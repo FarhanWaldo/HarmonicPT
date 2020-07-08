@@ -232,6 +232,7 @@ struct VecT( Type, int Dim )
     alias data  this;    // Means object can be indexed like it's an array
     alias Dim   dim;
     alias Type  valueType;
+	alias VecT!(Type,Dim) ThisType;
 
     this( Type v )
     {
@@ -268,8 +269,7 @@ struct VecT( Type, int Dim )
 
 
     pure const @nogc @safe nothrow
-	Type
-    magnitude()
+	Type magnitude()
     {
         static if ( dim == 2 ) return sqrt( x*x + y*y );
         else static if ( dim == 3 ) return sqrt( x*x + y*y + z*z );
@@ -277,13 +277,30 @@ struct VecT( Type, int Dim )
         else static assert( (dim >= 2 ) && ( dim <= 4 ), "Too many dimensions!");
     }
 
+    pure const @nogc @safe nothrow
+	Type magnitudeSquared()
+    {
+        static if ( dim == 2 ) return x*x + y*y;
+        else static if ( dim == 3 ) return x*x + y*y + z*z;
+        else static if ( dim == 4 ) return x*x + y*y + z*z + w*w;
+        else static assert( (dim >= 2 ) && ( dim <= 4 ), "Too many dimensions!");
+    }
+
+	
 	@nogc @safe nothrow
-    void
-    normalise()
+    void normalise()
     {
         this = (Type( 1 )/this.magnitude)*this;
     }
 
+    pure @nogc @safe nothrow
+	ThisType abs()
+	{
+		static if ( dim == 2 ) { return ThisType( Abs(x), Abs(y) ); }
+		else static if ( dim == 3 ) { return ThisType( Abs(x), Abs(y), Abs(z) ); }
+		else static if ( dim == 4 ) { return ThisType( Abs(x), Abs(y), Abs(z), Abs(w) ); }
+	}
+	
     pure const @nogc @safe nothrow
 	VecT
     opBinary( string op )( VecT rhs )
