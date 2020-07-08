@@ -3,14 +3,18 @@ import bsdf;
 import scene;
 import material;
 
+alias const(Interaction)         CInteraction;
+alias const(SurfaceInteraction)  CSurfaceInteraction;
+
 struct Interaction
 {
     vec3    m_pos;
     vec3    m_normal;
     vec3    m_posError;
-    float   m_time;
     vec3    m_wo;           /// Outgoing ray direction
+    float   m_time;
 
+	pure @nogc @safe nothrow
     this( in ref vec3 pos, in ref vec3 normal, float time )
     {
         m_pos       = pos;
@@ -18,7 +22,8 @@ struct Interaction
         m_time      = time;
     }
 
-    const Ray CreateRay( in ref vec3 dir )
+    pure const @nogc @safe nothrow
+	Ray CreateRay( in ref vec3 dir )
     {
         Ray newRay = void;
 
@@ -30,7 +35,8 @@ struct Interaction
     }
 
 
-    const Ray CreateRayTo( in ref vec3 endPoint )
+    pure const @nogc @safe nothrow
+	Ray CreateRayTo( in ref vec3 endPoint )
     {
         vec3 offsetPos = m_pos + EPSILON*m_normal;
         Ray newRay = CreateFiniteRaySegment( offsetPos, endPoint );
