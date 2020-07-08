@@ -54,9 +54,9 @@ struct EmissiveSurfacePrim
 
 	ShapeCommon*     m_shape;
 	IMaterial*       m_material; /// F_TODO:: Do emissive prims have materials? Emissive shaders?	
-	BaseAreaLight*   m_light;
+    LightCommon*   m_light;
 
-	this( ShapeCommon* shape, IMaterial* material, BaseAreaLight* light )
+	this( ShapeCommon* shape, IMaterial* material, LightCommon* light )
 	{
 		m_shape     = shape;
 		m_material  = material;
@@ -191,7 +191,7 @@ Prim_IntersectsRay( const(PrimCommon)* prim, const(Ray)* ray, ref ScenePrimInter
 
 
 pragma(inline, true) pure @nogc @trusted nothrow
-BaseAreaLight* Prim_GetLight( PrimCommon* prim, Ray* ray, ref ScenePrimIntersection primIntx )
+LightCommon* Prim_GetLight( PrimCommon* prim, Ray* ray, ref ScenePrimIntersection primIntx )
 {
 	switch ( prim.GetPrimType() )
 	{
@@ -211,7 +211,7 @@ BaseAreaLight* Prim_GetLight( PrimCommon* prim, Ray* ray, ref ScenePrimIntersect
 struct Scene
 {
 	PrimArray           m_rootPrim;
-    ILight*[]           m_lights;
+    LightCommon*[]      m_lights;
 }
 
 pure @nogc @safe nothrow
@@ -240,7 +240,7 @@ bool FindClosestIntersection( const(Scene)* scene, const(Ray)* ray, ref SurfaceI
 }
 
 pure @nogc @safe nothrow
-bool FindAnyIntersection( Scene* scene,  const(Ray)* ray )
+bool FindAnyIntersection( const(Scene)* scene,  const(Ray)* ray )
 {
     return scene.m_rootPrim.AnyIntersection( ray );
 }
