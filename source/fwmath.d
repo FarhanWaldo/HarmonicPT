@@ -129,6 +129,12 @@ unittest
     static assert( Clamp( 1e-5, 0.0, 2e-5) == 1e-5 );
 }
 
+pragma(inline,true) pure @nogc @safe nothrow
+T SafeSqrt(T)( T x )
+{
+	return sqrt( Max( T(0), x ) );
+}
+
 pragma(inline, true) pure nothrow @nogc @safe
 T Lerp( T )( float interpolant, in T a, in T b )
 {
@@ -293,7 +299,7 @@ struct VecT( Type, int Dim )
         this = (Type( 1 )/this.magnitude)*this;
     }
 
-    pure @nogc @safe nothrow
+    pure const @nogc @safe nothrow
 	ThisType abs()
 	{
 		static if ( dim == 2 ) { return ThisType( Abs(x), Abs(y) ); }
@@ -453,7 +459,7 @@ v_normalise( in vec3 v )
 
 pure @nogc @safe nothrow
 T
-v_dot( T, int Dim ) ( in ref VecT!( T, Dim ) a, in ref VecT!( T, Dim ) b )
+v_dot( T, int Dim ) ( in VecT!( T, Dim ) a, in VecT!( T, Dim ) b )
 {
     static if ( Dim == 2 ) return ( a.x*b.x + a.y*b.y );
     else static if ( Dim == 3 ) return ( a.x*b.x + a.y*b.y + a.z*b.z );
@@ -462,7 +468,7 @@ v_dot( T, int Dim ) ( in ref VecT!( T, Dim ) a, in ref VecT!( T, Dim ) b )
 
 pure @nogc @safe nothrow
 VecT!( T, Dim )
-v_lerp( T, int Dim ) ( in ref VecT!( T, Dim ) a, in ref VecT!( T, Dim ) b, T interpolant )
+v_lerp( T, int Dim ) ( in VecT!( T, Dim ) a, in VecT!( T, Dim ) b, T interpolant )
 {
     return interpolant*a + ( T(1) - interpolant )*b;
 }

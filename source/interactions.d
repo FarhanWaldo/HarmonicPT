@@ -99,3 +99,40 @@ GetAreaLightEmission( SurfaceInteraction surfIntx, in ref vec3 wo )
 // {
     
 // }
+
+// C++ code
+/*
+vec3
+OffsetRayOrigin(const vec3 &p, const vec3 &pError,
+                               const vec3 &n, const vec3 &w) {
+    float d = dot(abs(n), pError);
+    vec3 offset = d * n;
+    if (dot(w, n) < 0)
+    {
+        offset = -1.f*offset;
+    }
+    vec3 po = p + offset;
+    // <<Round offset point po away from p>> 
+       for (int i = 0; i < 3; ++i) {
+           if (offset.v[i] > 0)      po.v[i] = NextFloatUp(po.v[i]);
+           else if (offset.v[i] < 0) po.v[i] = NextFloatDown(po.v[i]);
+       }
+
+    return po;
+}
+*/
+pure @nogc @safe nothrow
+vec3 OffsetRayOrigin( in vec3 P, in vec3 pError, in vec3 N, in vec3 w )
+{
+	const float d = v_dot( N.abs(), pError );
+	vec3 offset = d*N;
+	if ( v_dot( w, N ) < 0.0f )
+	{
+	    offset *= -1.0f;
+	}
+
+    // FW_TODO:: Do that float thingy that's in the C++ code
+	
+	vec3 PO = P + offset;
+	return PO;
+}

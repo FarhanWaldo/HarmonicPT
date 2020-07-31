@@ -9,7 +9,8 @@ struct VisibilityTester
     Interaction    m_p0;
 	Interaction    m_p1;
 
-	this( in ref Interaction p0, in ref Interaction p1 )
+	pure @nogc @safe nothrow
+	this( in Interaction p0, in Interaction p1 )
 	{
 	    m_p0 = p0;
 		m_p1 = p1;
@@ -72,7 +73,6 @@ struct DiffuseAreaLight
     LightCommon m_common;
 	alias m_common this;
 
-	// Replace with spectrum
 	Spectrum      m_emission;
     ShapeCommon*  m_shape;	/// An area light is associated with a piece of geometry
 
@@ -89,7 +89,7 @@ alias const(DiffuseAreaLight) CDiffuseAreaLight;
 
 
 pure @nogc @trusted nothrow
-Spectrum // F_TODO:: Should be a spectrum....
+Spectrum
 Light_SampleIrradiance(
     CLightCommon* light,
     CInteraction* refPoint,
@@ -101,16 +101,16 @@ Light_SampleIrradiance(
     switch ( light.GetType() )
 	{
 	    case LightType.DiffuseAreaLight:
-		auto areaLight = cast(CDiffuseAreaLight*) light;
-		return DiffuseAreaLight_SampleIrradiance( areaLight, refPoint, randomSample, o_irradianceDirection, o_pdf, visTester );
+			auto areaLight = cast(CDiffuseAreaLight*) light;
+			return DiffuseAreaLight_SampleIrradiance( areaLight, refPoint, randomSample, o_irradianceDirection, o_pdf, visTester );
 
 		default:
-		return vec3(0.0f);
+    		return vec3(0.0f);
 	}
 }
 
 pure @nogc @safe nothrow
-Spectrum // F_TODO:: Should be spectrum ...
+Spectrum
 DiffuseAreaLight_SampleIrradiance(
     CDiffuseAreaLight* areaLight,
 	CInteraction*      refPoint,
@@ -119,5 +119,39 @@ DiffuseAreaLight_SampleIrradiance(
 	ref float          o_pdf,
 	ref VisibilityTester visTester )
 {
-    return vec3(0.0f);
+	Interaction shapeIntx = Shape_Sample( areaLight.m_shape, refPoint, randomSample );
+    // FW_TODO::[MediumInterface] assign the one fron the light to the Interaction object
+    // FW_TODO::[pbrt] should probably consult PBRT or something on this part...
+	o_irradianceDirection = v_normalise( shapeIntx.m_pos - refPoint.m_pos );
+	o_pdf                 = Shape_Pdf( areaLight.m_shape, refPoint, o_irradianceDirection );
+
+	visTester             = VisibilityTester(*refPoint, cast(CInteraction) shapeIntx );
+
+    pure @nogc @safe nothrow
+	Spectrum CalculateEmission( CDiffuseAreaLight* light,  in Interaction intx, in vec3 wo )
+	{
+	    return ( v_dot( intx.m_normal, wo ) > 0.0f ) ? light.m_emission : Spectrum( 0.0f );
+	}
+	
+    // return radiance;
+	return CalculateEmission( areaLight, shapeIntx, -1.0f*o_irradianceDirection );
+}
+
+
+pure @nogc @trusted nothrow
+float
+Light_SamplePdf(
+  	CLightCommon* light,
+	CInteraction* refPoint,
+	in vec3       irradianceDirection )
+{
+    switch ( light.GetType() )
+	{
+	    case LightType.DiffuseAreaLight:
+		    auto areaLight = cast(CDiffuseAreaLight*)( light );
+			return Shape_Pdf( areaLight.m_shape, refPoint, irradianceDirection );
+
+		default:
+		    assert(false, "Unsupported light type for Light_SamplePdf");
+	}
 }

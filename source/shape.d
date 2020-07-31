@@ -122,6 +122,39 @@ bool Sphere_IntersectsRay( const(ShapeSphere)* shpSphere, const(Ray)* ray, ref I
 
 }
 
+pragma(inline,true) pure @nogc @trusted nothrow
+float Shape_Pdf( CShapeCommon* shape, CInteraction* refPoint, in vec3 wi )
+{
+    switch( shape.m_shapeType )
+	{
+	    case EShape.Sphere:
+		    auto sphere = cast( CShapeSphere* ) shape;
+			return Sphere_Pdf( sphere, refPoint, wi );
+
+		default:
+		    assert("Shape_Pdf called for unimplemented shape type ");
+			return 0.0f;
+	}
+}
+
+pure @nogc @safe nothrow
+float Sphere_Pdf( CShapeSphere* sphere, CInteraction* refPoint, in vec3 wi )
+{
+	const vec3 centre = sphere.m_geo.m_centre;
+	const float r     = sphere.m_geo.m_radius;
+    const vec3 origin = OffsetRayOrigin( refPoint.m_pos, refPoint.m_posError, refPoint.m_normal, centre - refPoint.m_pos );
+
+	if ((origin - centre).magnitudeSquared() <= r*r)
+	{
+        assert("damnit, more work to do");          
+	}
+
+	const float sinThetaMax2 = r*r/((refPoint.m_pos-centre).magnitudeSquared());
+	const float cosThetaMax  = SafeSqrt( sinThetaMax2 );
+	
+	return UniformConePdf( cosThetaMax );
+}
+
 pragma(inline, true) pure @nogc @trusted nothrow
 Interaction
 Shape_Sample( CShapeCommon* shape, CInteraction* refPoint, in vec2 randomSample )
@@ -129,12 +162,12 @@ Shape_Sample( CShapeCommon* shape, CInteraction* refPoint, in vec2 randomSample 
     switch ( shape.m_shapeType )
 	{
 	    case EShape.Sphere:
-        auto sphere = cast( CShapeSphere* ) shape;
-		return Sphere_Sample( sphere, refPoint, randomSample );
+			auto sphere = cast( CShapeSphere* ) shape;
+			return Sphere_Sample( sphere, refPoint, randomSample );
 
 		default:
-		assert("Unimplemented shape type");
-		return Interaction();
+			assert("Unimplemented shape type");
+			return Interaction();
 	}
 }
 
@@ -187,8 +220,8 @@ Sphere_Sample( CShapeSphere* sphere, CInteraction* refPoint, in vec2 randomSampl
 	// Create a coordinate system where the z axis faces from the ref point
 	//   to the centre of the sphere
 	//
-	const vec3 _z = v_normalise( refPointToCentre );
 	vec3 _y, _x;
+	const vec3 _z = v_normalise( refPointToCentre );
 	CreateOnb( _z, _x, _y );
 
     const vec2 u = randomSample;
