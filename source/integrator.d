@@ -5,7 +5,7 @@ import image;
 import sampling;
 import fwmath;
 import interactions;
-
+import spectrum;
 
 interface IIntegrator
 {
@@ -116,7 +116,7 @@ class SamplerIntegrator : IIntegrator
             {
                 // // thread id stuff
                 
-                vec3 pixelColour = vec3(0.0); // = vec3( 0.0, 1.0, 0.0 );
+                Spectrum pixelColour = Spectrum(0.0); // = vec3( 0.0, 1.0, 0.0 );
                 // // int  nSamples;
 
                 foreach ( progression; 0 .. numProgressions )
@@ -147,9 +147,9 @@ class SamplerIntegrator : IIntegrator
         return true;
     }
 
-    vec3
+    Spectrum
     Irradiance(
-        in ref Ray      ray,
+        in  Ray      ray,
         Scene*          scene,
         BaseSampler*    sampler,
         IMemAlloc*      memArena,
@@ -167,9 +167,9 @@ class WhittedIntegrator : SamplerIntegrator
         super( m_sampler, cam, renderBuffer, maxBounces );
     }
 
-    override vec3
+    override Spectrum
     Irradiance(
-        in ref Ray      ray,
+        in  Ray      ray,
         Scene*          scene,
         BaseSampler*    sampler,
         IMemAlloc*      memArena,
@@ -192,4 +192,35 @@ class WhittedIntegrator : SamplerIntegrator
 
     }
 
+}
+
+enum LightingStrategy
+{
+    UniformSampleAll,
+	UniformSampleOne
+}
+
+class DirectLightingIntegrator : SamplerIntegrator
+{
+    LightingStrategy m_lightingStrategy;
+
+    this( BaseSampler* sampler, Camera cam, Image_F32* renderBuffer, LightingStrategy lightingStrategy )
+	{
+		super( sampler, cam, renderBuffer, 1 /* max bounces */ );
+		m_lightingStrategy = lightingStrategy;
+	}
+	
+	override Spectrum
+	Irradiance( in Ray ray, Scene* scene, BaseSampler* sampler, IMemAlloc* memArena, int depth = 0 )
+	{
+		Spectrum radiance;
+
+        SurfaceInteraction surfIntx;
+		if ( scene.FindClosestIntersection( &ray, surfIntx ) )
+		{
+		    
+		}
+		
+		return radiance;
+	}
 }
