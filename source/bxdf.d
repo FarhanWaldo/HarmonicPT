@@ -151,34 +151,55 @@ abstract class BaseBxDF
             The ratio of reflected irradiance heading towards wo
     */
 	pure const @safe @nogc nothrow
-	vec3 F( in vec3 wo, in vec3 wi );
+	Spectrum F( in vec3 wo, in vec3 wi );
 
     // F_TODO:: Document the parameters of these methods.
 	
     /**
         Generates a sampling direction (o_wi) and PDF (o_pdf) give na random sample u (2D uniform random number)
+
+        The default implementation will do simple cosine lobe sampling.
+
+        NOTE:: The default implementation of Sample_F and Pdf is for cosine hemisphere sampling
+               If a new sampling technique needs to be written, Pdf must also be changed accordingly
     */
 	pure const @safe @nogc nothrow
-	vec3 Sample_F(
+    Spectrum Sample_F(
 	    in vec3     wo,    
 		in vec2     u,
 		ref vec3    o_wi,
 	    float*      o_pdf,
-		BxDFType*   o_sampledType = null );
+		BxDFType*   o_sampledType = null )
+	{
+        o_wi = CosineSampleHemisphere( u );
+		if ( wo.z < 0.0f ) {
+		    o_wi.z *= -1.0f;
+		}
+		*o_pdf = Pdf( wo, o_wi );
+		return F( wo, o_wi );
+	}
 
 	/**
         Returns the PDF value for a pair of incoming and outgoing directions
+
+        NOTE:: Does cosine hemisphere sampling by default. If a different PDF function is desired,
+               then Sample_F must also be updated
     */
 	pure const @safe @nogc nothrow
-	float Pdf( in vec3 wo, in vec3 wi );
+	float Pdf( in vec3 wo, in vec3 wi )
+	{
+	    return SameHemisphere( wo, wi ) ? AbsCosTheta( wi )*INV_PI : 0.0f;
+	}
 
 
+	/// F_TODO:: Add default routines for calculating hemispherical reflectances below
+	///
 	/**
         Compute the Hemispherical-Directional reflectance on the surface in the direction wo
         The integral of the BDRF toward wo over the hemisphere of incoming directions
     */
 	pure const @safe @nogc nothrow
-	vec3 Rho( in vec3 wo, in vec2[] samples );
+    Spectrum Rho( in vec3 wo, in vec2[] samples );
 
 	/**
         Compute the average Hemispherical-Hemispherical reflection on the surface.
@@ -186,6 +207,54 @@ abstract class BaseBxDF
           of outgoing directions.
     */
 	pure const @safe @nogc nothrow
-	vec3 Rho( in vec2[] samples1, in vec2[] samples2 );
+    Spectrum Rho( in vec2[] samples1, in vec2[] samples2 );
+}
+
+
+class LambertBrdf : BaseBxDF
+{
+    Spectrum m_R;
+
+    this( Spectrum reflectance )
+	{
+	    super( BxDFType.Diffuse | BxDFType.Reflection );
+		m_R = reflectance;
+	}
+	
+	/**
+        Evaluate the BxDF for a given outgoing and incident lighting direction
+        Params:
+            wo = outgoing direction
+            wi = incident lighting direction
+        Returns:
+            The ratio of reflected irradiance heading towards wo
+    */
+	override pure const @safe @nogc nothrow
+	Spectrum F( in vec3 wo, in vec3 wi )
+	{
+	    return m_R*INV_PI;
+	}
+
+
+	/**
+        Compute the Hemispherical-Directional reflectance on the surface in the direction wo
+        The integral of the BDRF toward wo over the hemisphere of incoming directions
+    */
+	override pure const @safe @nogc nothrow
+    Spectrum Rho( in vec3 wo, in vec2[] samples )
+	{
+	    return m_R;
+	}
+
+	/**
+        Compute the average Hemispherical-Hemispherical reflection on the surface.
+        The same as the Hemispheriecal-Directional reflectance, but averaged over the hemisphere
+          of outgoing directions.
+    */
+	override pure const @safe @nogc nothrow
+    Spectrum Rho( in vec2[] samples1, in vec2[] samples2 )
+	{
+        return m_R;
+	}
 }
 

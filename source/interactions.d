@@ -90,7 +90,7 @@ struct SurfaceInteraction
     }
 }
 
-pure @safe @nogc nothrow
+@safe @nogc nothrow
 void ComputeScatteringFunctions(
 	SurfaceInteraction* si,
 	IMemAlloc*          memArena,

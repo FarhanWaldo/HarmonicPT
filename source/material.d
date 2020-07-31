@@ -1,17 +1,22 @@
 import memory;
 import interactions;
+import bsdf;
+import bxdf;
 import texture;
+import spectrum;
+
+import std.conv : emplace;
 
 interface IMaterial
 {
-	pure @safe @nogc nothrow
+	@safe @nogc nothrow
 	void ComputeScatteringFunctions( SurfaceInteraction* si,
-									 IMemAlloc*          memAlloc,
+									 IMemAlloc*          memArena,
 									 bool                transportFromEye,
 									 bool                allowMultipleLobes );
 }
-version(none) {
-class MatteMaterial
+
+class MatteMaterial : IMaterial
 {
     ITexture* m_albedo;
 
@@ -20,14 +25,17 @@ class MatteMaterial
 		m_albedo = albedo;
 	}
 
-	override pure @safe @nogc nothrow
+	override @trusted @nogc nothrow
 	void ComputeScatteringFunctions( SurfaceInteraction* si,
-									 IMemAlloc*          memAlloc,
+									 IMemAlloc*          memArena,
 									 bool                transportFromEye,
 									 bool                allowMultipleLobes )
 	{
-		
+		si.m_bsdf = cast(Bsdf*) emplace( memArena.Alloc!Bsdf(), si.m_normal, si.m_shading.n, si.m_shading.dpdu );
+
+		Spectrum reflectance = m_albedo.Sample( si.m_uv, si.m_pos );
+
+		// F_TODO:: Add lambert brdf
 	}
 	
-}
 }
