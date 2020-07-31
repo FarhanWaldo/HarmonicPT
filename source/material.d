@@ -9,7 +9,7 @@ import std.conv : emplace;
 
 interface IMaterial
 {
-	@safe @nogc nothrow
+	@trusted
 	void ComputeScatteringFunctions( SurfaceInteraction* si,
 									 IMemAlloc*          memArena,
 									 bool                transportFromEye,
@@ -20,12 +20,13 @@ class MatteMaterial : IMaterial
 {
     ITexture* m_albedo;
 
+	pure @safe @nogc nothrow
 	this( ITexture* albedo )
 	{
 		m_albedo = albedo;
 	}
 
-	override @trusted @nogc nothrow
+	override @trusted
 	void ComputeScatteringFunctions( SurfaceInteraction* si,
 									 IMemAlloc*          memArena,
 									 bool                transportFromEye,
@@ -34,8 +35,7 @@ class MatteMaterial : IMaterial
 		si.m_bsdf = cast(Bsdf*) emplace( memArena.Alloc!Bsdf(), si.m_normal, si.m_shading.n, si.m_shading.dpdu );
 
 		Spectrum reflectance = m_albedo.Sample( si.m_uv, si.m_pos );
-
-		// F_TODO:: Add lambert brdf
+        si.m_bsdf.AddBxDF( cast(BaseBxDF*) emplace!LambertBrdf( memArena.AllocClass!LambertBrdf(), reflectance ) );
 	}
 	
 }

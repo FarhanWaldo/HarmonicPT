@@ -72,6 +72,12 @@ T* Alloc(T, T_Alloc)( ref T_Alloc alloc )
 	return cast(T*) alloc.Allocate( T.sizeof );
 }
 
+pragma(inline, true) @nogc nothrow
+void[] AllocClass(T, T_Alloc)( ref T_Alloc alloc )
+{
+	return alloc.Allocate( T.sizeof );
+}
+
 pragma(inline,true)
 T[] AllocArray( T )( BaseMemAlloc* memAlloc, u64 numElements, u64 alignment= 16 )
 {
