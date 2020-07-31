@@ -62,8 +62,14 @@ struct BufferT(T, ulong N = 0, bool BOUND_CHECK = true )
 	    return m_capacity;
 	}
 
-	@nogc @safe nothrow
+	pure @nogc @safe nothrow
 	T[] range()
+	{
+		return m_data[0..m_size];
+	}
+
+	pure const @nogc @safe nothrow
+	const(T[]) range()
 	{
 		return m_data[0..m_size];
 	}

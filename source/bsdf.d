@@ -13,8 +13,6 @@ struct Bsdf
 	vec3  m_shadingS;
 	vec3  m_shadingT;
 
-	// BaseBxDF*[8]  m_bxdfs;
-    // uint          m_numBxdfs = 0;
 	enum MaxLobes = 8;
 	alias BufferT!( BaseBxDF*, MaxLobes)  BxDFStack;
     BxDFStack m_bxdfs;

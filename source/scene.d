@@ -191,7 +191,7 @@ Prim_IntersectsRay( const(PrimCommon)* prim, const(Ray)* ray, ref ScenePrimInter
 
 
 pragma(inline, true) pure @nogc @trusted nothrow
-LightCommon* Prim_GetLight( PrimCommon* prim, Ray* ray, ref ScenePrimIntersection primIntx )
+LightCommon* Prim_GetLight( CPrimCommon* prim )
 {
 	switch ( prim.GetPrimType() )
 	{

@@ -89,6 +89,28 @@ alias const(DiffuseAreaLight) CDiffuseAreaLight;
 
 
 pure @nogc @trusted nothrow
+Spectrum CalculateEmission( CLightCommon* light, in Interaction intx, in vec3 wo )
+{
+    switch ( light.GetType() )
+	{
+        case LightType.DiffuseAreaLight:
+		    auto areaLight = cast(CDiffuseAreaLight*) light;
+			return CalculateEmission( areaLight, intx, wo );
+	
+	    default:
+		return Spectrum();
+	}
+}
+
+pure @nogc @safe nothrow
+Spectrum CalculateEmission( CDiffuseAreaLight* light,  in Interaction intx, in vec3 wo )
+{
+	return ( v_dot( intx.m_normal, wo ) > 0.0f ) ? light.m_emission : Spectrum( 0.0f );
+}
+
+
+
+pure @nogc @trusted nothrow
 Spectrum
 Light_SampleIrradiance(
     CLightCommon* light,
@@ -126,12 +148,6 @@ DiffuseAreaLight_SampleIrradiance(
 	o_pdf                 = Shape_Pdf( areaLight.m_shape, refPoint, o_irradianceDirection );
 
 	visTester             = VisibilityTester(*refPoint, cast(CInteraction) shapeIntx );
-
-    pure @nogc @safe nothrow
-	Spectrum CalculateEmission( CDiffuseAreaLight* light,  in Interaction intx, in vec3 wo )
-	{
-	    return ( v_dot( intx.m_normal, wo ) > 0.0f ) ? light.m_emission : Spectrum( 0.0f );
-	}
 	
     // return radiance;
 	return CalculateEmission( areaLight, shapeIntx, -1.0f*o_irradianceDirection );

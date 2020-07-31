@@ -2,6 +2,9 @@ import fwmath;
 import bsdf;
 import scene;
 import material;
+import spectrum;
+import memory;
+import light;
 
 alias const(Interaction)         CInteraction;
 alias const(SurfaceInteraction)  CSurfaceInteraction;
@@ -87,11 +90,26 @@ struct SurfaceInteraction
     }
 }
 
-pure vec3
-GetAreaLightEmission( SurfaceInteraction surfIntx, in ref vec3 wo )
+pure @safe @nogc nothrow
+void ComputeScatteringFunctions(
+	SurfaceInteraction* si,
+	IMemAlloc*          memArena,
+	bool                transportFromEyes,
+	bool                allowMultipleLobes )
 {
-    // TODO:: Implement IAreaLight::L ()
-    return vec3();
+    if ( (si.m_prim != null) && (si.m_material != null) )
+	{
+	    si.m_material.ComputeScatteringFunctions( si, memArena, transportFromEyes, allowMultipleLobes );
+	}
+}
+								
+
+pure @safe @nogc nothrow
+Spectrum GetAreaLightEmission( in SurfaceInteraction surfIntx, in ref vec3 wo )
+{
+    LightCommon* light = Prim_GetLight( surfIntx.m_prim );
+    
+    return ( light != null ) ? CalculateEmission( light, surfIntx, wo ) : Spectrum();
 }
 
 
