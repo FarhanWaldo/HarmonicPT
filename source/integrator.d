@@ -6,6 +6,9 @@ import sampling;
 import fwmath;
 import interactions;
 import spectrum;
+import light;
+import bxdf;
+import bsdf;
 
 interface IIntegrator
 {
@@ -218,9 +221,71 @@ class DirectLightingIntegrator : SamplerIntegrator
         SurfaceInteraction surfIntx;
 		if ( scene.FindClosestIntersection( &ray, surfIntx ) )
 		{
-		    
+            ComputeScatteringFunctions( &surfIntx, memArena, true /* from eyes */, true /* allow multiple lobes */ );
+
+			vec3 wo = surfIntx.m_wo;
+			radiance += surfIntx.GetAreaLightEmission( wo );
+
+			if ( m_lightingStrategy == LightingStrategy.UniformSampleAll )
+			{
+			    // TODO::
+			}
+			else
+			{
+			    
+			}
 		}
 		
 		return radiance;
 	}
+}
+
+@safe @nogc nothrow
+Spectrum UniformSampleOneLight(
+    in CInteraction intx,
+	Scene*          scene,
+	IMemAlloc*      memArena,
+	BaseSampler*    sampler,
+	bool            handleMedia = false /* currently unsupported */ )
+{
+    Spectrum irradiance;
+	
+    const ulong numLights = scene.m_lights.length;
+	if ( numLights == 0 ) { return irradiance; }
+
+	const ulong lightIndex = Min( numLights - 1, cast(ulong) sampler.Get1D()*numLights );
+	CLightCommon* light = scene.m_lights[ lightIndex ];
+
+	vec2 uLight         = sampler.Get2D();
+	vec2 uScattering    = sampler.Get2D();
+
+    irradiance = cast(float)(numLights)*EstimateDirect(
+	                                     intx,
+										 uScattering, uLight,
+										 light, scene,
+										 sampler, memArena,
+										 true /* handle spec */,
+										 false /* handle media */ );
+	
+	
+    return irradiance;
+}
+
+@safe @nogc nothrow
+Spectrum EstimateDirect(
+    in CInteraction intx,
+	vec2            uScatter,
+	vec2            uLight,
+    CLightCommon*   light,
+	Scene*          scene,
+	BaseSampler*    sampler,
+	IMemAlloc*      memArena,
+	bool            handleSpecular = false,
+	bool            handleMedia = false )
+{
+    Spectrum irradiance;
+
+    const BxDFType flags = handleSpecular ? BxDFType.All : ( BxDFType.All & ~BxDFType.Specular );
+	
+    return irradiance;
 }

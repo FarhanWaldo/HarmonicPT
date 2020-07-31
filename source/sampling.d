@@ -123,8 +123,8 @@ abstract class BaseSampler
         return n;
     }
 
-    float Get1D();
-    vec2  Get2D();
+    @safe @nogc nothrow float Get1D();
+    @safe @nogc nothrow vec2  Get2D();
 
     void Request1DArray( uint n )
     {

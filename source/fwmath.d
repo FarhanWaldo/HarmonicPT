@@ -167,8 +167,8 @@ unittest
 
 }
 
-pure float
-frand( int* seed )
+pure @trusted @nogc nothrow
+float frand( int* seed )
 {
     union frandT
     {
@@ -186,11 +186,13 @@ struct RNG
 {
     i32 m_seed;
 
+	pure @safe @nogc nothrow
     this( i32 seed )
     {
         this.m_seed = seed;
     }
 
+	@trusted @nogc nothrow
     float rand() {  return frand(&m_seed); }
 }
 
