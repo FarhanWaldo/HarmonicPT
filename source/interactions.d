@@ -16,7 +16,8 @@ struct Interaction
     vec3    m_posError;
     vec3    m_wo;           /// Outgoing ray direction
     float   m_time;
-
+    bool    m_isSurfaceInteraction = false;
+	
 	pure @nogc @safe nothrow
     this( in ref vec3 pos, in ref vec3 normal, float time )
     {
@@ -76,6 +77,8 @@ struct SurfaceInteraction
           in ref vec3 dndu, in ref vec3 dndv,
           float time )
     {
+	    m_isSurfaceInteraction = true;
+		
         m_pos       = pos;
         m_normal    = n;
         m_time      = time;		

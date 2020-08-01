@@ -6,6 +6,7 @@ import sampling;
 
 enum BxDFType
 {
+    None             = 0,
     Reflection       = 1 << 0,
 	Transmission     = 1 << 1,
 	Diffuse          = 1 << 2,
@@ -131,6 +132,9 @@ abstract class BaseBxDF
 	    m_type = type;
 	}
 
+    pure const @safe @nogc nothrow final
+	BxDFType GetType() { return m_type; }
+	
 	pure const @safe @nogc nothrow
 	bool MatchesType( BxDFType type ) {
 	    return ( m_type & type ) == m_type;

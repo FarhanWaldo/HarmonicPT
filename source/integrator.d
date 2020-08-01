@@ -271,9 +271,9 @@ Spectrum UniformSampleOneLight(
     return irradiance;
 }
 
-@safe @nogc nothrow
+@trusted @nogc nothrow
 Spectrum EstimateDirect(
-    in CInteraction intx,
+    in CInteraction refIntx,
 	vec2            uScatter,
 	vec2            uLight,
     CLightCommon*   light,
@@ -284,8 +284,28 @@ Spectrum EstimateDirect(
 	bool            handleMedia = false )
 {
     Spectrum irradiance;
-
     const BxDFType flags = handleSpecular ? BxDFType.All : ( BxDFType.All & ~BxDFType.Specular );
+
+    vec3  wi;
+	float lightPdf;
+	float scatterPdf;
+
+	VisibilityTester visTester;
+
+	Spectrum irradianceFromLight =
+	    Light_SampleIrradiance( light, &refIntx, uLight, wi, lightPdf, visTester );
+	if ( lightPdf > 0.0f && !irradianceFromLight.IsBlack() )
+	{
+	    Spectrum F;
+
+		if ( refIntx.m_isSurfaceInteraction )
+		{
+		    auto surfIntx = cast( const(SurfaceInteraction*) )( &refIntx );
+			// F = surfIntx F_TODO:: Need to call Bsdf::F() here (needs to be implemented)
+
+			
+		}
+	}
 	
     return irradiance;
 }
