@@ -17,7 +17,9 @@ enum BxDFType
 	                   Transmission |
 					   Diffuse |
 					   Glossy |
-					   Specular
+					   Specular,
+
+    AllNonSpecular   = All & ~Specular
 }
 
 /**

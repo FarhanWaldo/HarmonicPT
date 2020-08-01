@@ -116,8 +116,6 @@ struct Bsdf
 
 		/// Filter down the BxDF stack to just the matching ones
 		///
-        // BxDFStack  filteredLobes;
-		// const uint numMatchingLobes = Filter( filteredLobes, flags );
 		BxDFStack filteredLobes = FilterLobes( flags );
 		const uint numMatchingLobes = filteredLobes.length;
 		if ( numMatchingLobes == 0 )
@@ -135,8 +133,8 @@ struct Bsdf
 		///  'u' is a uniform random 2D number supplied to this sampling function
 		///  We'll use one of the two random numbers to pick one of the filtered lobes with equal probability
 		///
-	    const uint selectedLobeIndex = Min( numMatchingLobes - 1, cast(uint) u.x*numMatchingLobes );
-		const(BaseBxDF)* selectedLobe       = filteredLobes[ selectedLobeIndex ];
+	    const uint selectedLobeIndex  = Min( numMatchingLobes - 1, cast(uint) u.x*numMatchingLobes );
+		const(BaseBxDF)* selectedLobe = filteredLobes[ selectedLobeIndex ];
 
 		///  Since we used u.x to select the lobe, we need to remap the u.x value to [0, 1) in order to use it
 		///    for BxDF sampling (we need a uniform random number [0,1)x[0,1) )

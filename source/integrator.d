@@ -284,7 +284,7 @@ Spectrum EstimateDirect(
 	bool            handleMedia = false )
 {
     Spectrum irradiance;
-    const BxDFType bsdfFlags = handleSpecular ? BxDFType.All : ( BxDFType.All & ~BxDFType.Specular );
+    const BxDFType bsdfFlags = handleSpecular ? BxDFType.All : BxDFType.AllNonSpecular;
 
     vec3  wi;
 	float lightPdf;
@@ -297,14 +297,49 @@ Spectrum EstimateDirect(
 	if ( lightPdf > 0.0f && !irradianceFromLight.IsBlack() )
 	{
 	    Spectrum F;
-
 		if ( refIntx.m_isSurfaceInteraction )
 		{
 		    auto surfIntx = cast( const(SurfaceInteraction*) )( &refIntx );
+			F = surfIntx.m_bsdf.F( surfIntx.m_wo, wi, bsdfFlags ) * Abs( v_dot( wi, surfIntx.m_shading.n ));
+			scatterPdf = surfIntx.m_bsdf.Pdf( surfIntx.m_wo, wi, bsdfFlags );
 			// F = surfIntx.m_bsdf.Sample_F( surfIntx.m_wo, wi, uScatter, scatterPdf, bsdfFlags, &sampledType );
 			// F *= Abs( v_dot( 
 		}
+		else
+		{
+		    //[TODO]:: medium interaction
+			//
+        }
+
+		if ( !F.IsBlack() )
+		{
+		    if ( handleMedia )
+			{
+			    /// TODO:: [media][volumes][transmittance]
+			}
+			else if ( !visTester.Unoccluded(scene) )
+			{
+			    /// Path is obstructed, zero out irradiance from light
+				irradianceFromLight = Spectrum(0.0f);
+			}
+
+			if (!irradianceFromLight.IsBlack())
+			{
+			     // TODO:: We don't handle delta lights here.... maybe we should?
+
+				pure @safe @nogc nothrow
+				float PowerHeuristic(int nf, float fPdf, int ng, float gPdf) {
+					float f = nf * fPdf, g = ng * gPdf;
+					return (f * f) / (f * f + g * g);
+				}
+
+				const float weight = PowerHeuristic( 1, lightPdf, 1, scatterPdf );
+				irradiance += (weight/lightPdf)*F*irradianceFromLight;
+			}
+		}
 	}
+
+
 	
     return irradiance;
 }
