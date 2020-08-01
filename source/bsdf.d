@@ -177,10 +177,28 @@ struct Bsdf
 		return F;
 	}
 
-	pure const @safe @nogc nothrow
+	pure @trusted @nogc nothrow
 	float Pdf( in vec3 world_wo, in vec3 world_wi, BxDFType flags )
 	{
-		return 0.0f;
+        if ( m_bxdfs.Empty() ) { return 0.0f; }
+
+		// Convert directions from worldspace to the reflection coordinate system
+		//
+		const vec3 wo = WorldToLocal( world_wo );
+		const vec3 wi = WorldToLocal( world_wi );
+
+        if ( wo.z == 0.0f ) { return 0.0f; }
+
+		BxDFStack  lobes;
+		const uint matchingLobes = Filter( lobes, flags );
+        float pdf = 0.0f;
+		foreach ( lobe; lobes ) {
+		    pdf += lobe.Pdf( wo, wi );
+		}
+
+		if ( matchingLobes > 1 ) { pdf /= ( cast(float) matchingLobes ); }
+		
+		return pdf;
 	}
 					   
 }
