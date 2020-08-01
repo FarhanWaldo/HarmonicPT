@@ -284,16 +284,16 @@ Spectrum EstimateDirect(
 	bool            handleMedia = false )
 {
     Spectrum irradiance;
-    const BxDFType flags = handleSpecular ? BxDFType.All : ( BxDFType.All & ~BxDFType.Specular );
+    const BxDFType bsdfFlags = handleSpecular ? BxDFType.All : ( BxDFType.All & ~BxDFType.Specular );
 
     vec3  wi;
 	float lightPdf;
 	float scatterPdf;
 
 	VisibilityTester visTester;
-
 	Spectrum irradianceFromLight =
 	    Light_SampleIrradiance( light, &refIntx, uLight, wi, lightPdf, visTester );
+	
 	if ( lightPdf > 0.0f && !irradianceFromLight.IsBlack() )
 	{
 	    Spectrum F;
@@ -301,9 +301,8 @@ Spectrum EstimateDirect(
 		if ( refIntx.m_isSurfaceInteraction )
 		{
 		    auto surfIntx = cast( const(SurfaceInteraction*) )( &refIntx );
-			// F = surfIntx F_TODO:: Need to call Bsdf::F() here (needs to be implemented)
-
-			
+			// F = surfIntx.m_bsdf.Sample_F( surfIntx.m_wo, wi, uScatter, scatterPdf, bsdfFlags, &sampledType );
+			// F *= Abs( v_dot( 
 		}
 	}
 	

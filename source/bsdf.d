@@ -15,7 +15,7 @@ struct Bsdf
 	vec3  m_shadingT;
 
 	enum MaxLobes = 8;
-	alias BufferT!( BaseBxDF*, MaxLobes)  BxDFStack;
+	alias BufferT!( const(BaseBxDF)*, MaxLobes)  BxDFStack;
     BxDFStack m_bxdfs;
 	
 	float         m_eta; // Relative index of refraction
@@ -31,7 +31,7 @@ struct Bsdf
 	}
 
 	pure @safe @nogc nothrow
-	void AddBxDF( BaseBxDF* bxdf ) {
+	void AddBxDF( const(BaseBxDF)* bxdf ) {
 		m_bxdfs.Push( bxdf );
 	}
 
@@ -48,23 +48,17 @@ struct Bsdf
 	}
 
 	/**
-        Pushes the filtered lobes onto an externally provided BxDFStack
-
-        Returns the number of BxDFs that match the flags 
+        Returns a new BxDFStack with only the lobes that match against flags
 	 */
-	pure @safe @nogc nothrow
-	uint Filter( ref BxDFStack filteredLobes, BxDFType flags ) {
-		uint numMatching = 0;
-		
-        filteredLobes.Reset();
+	pure const @trusted @nogc nothrow
+	BxDFStack FilterLobes( BxDFType flags ) {
+		BxDFStack filteredLobes;
         foreach( bxdf; m_bxdfs.range() ) {
 			if ( bxdf.MatchesType(flags) ) {
-				++numMatching;
 				filteredLobes.Push( bxdf );
 			}
 		}
-		
-		return numMatching;
+		return filteredLobes;
 	}
 
 	pure const @safe @nogc nothrow
@@ -86,7 +80,31 @@ struct Bsdf
 		);
 	}
 
-	pure @trusted @nogc nothrow
+    pure const @safe @nogc nothrow
+	Spectrum F( in vec3 world_wo, in vec3 world_wi, BxDFType flags )
+	{
+	    const vec3 wo = v_normalise( WorldToLocal( world_wo ) );
+		const vec3 wi = v_normalise( WorldToLocal( world_wi ) );
+
+		const bool isReflection = (v_dot(world_wo, m_geoNormal) * v_dot(world_wi,m_geoNormal)) > 0.0f;
+
+		Spectrum sumF;
+		
+		const BxDFStack lobes = FilterLobes( flags );
+		foreach( lobe; lobes ) {
+
+			const BxDFType lobeType = lobe.GetType();
+			if ( (isReflection  && (lobeType & BxDFType.Reflection   )) ||
+				 (!isReflection && (lobeType & BxDFType.Transmission )) )
+			{
+				 sumF += lobe.F( wo, wi );
+			}
+		}
+		
+		return sumF;
+	}
+	
+	pure const @trusted @nogc nothrow
 	Spectrum Sample_F( in vec3   world_wo,
 					   ref vec3  o_world_wi,
 					   in vec2   u,
@@ -98,8 +116,10 @@ struct Bsdf
 
 		/// Filter down the BxDF stack to just the matching ones
 		///
-        BxDFStack  filteredLobes;
-		const uint numMatchingLobes = Filter( filteredLobes, flags );
+        // BxDFStack  filteredLobes;
+		// const uint numMatchingLobes = Filter( filteredLobes, flags );
+		BxDFStack filteredLobes = FilterLobes( flags );
+		const uint numMatchingLobes = filteredLobes.length;
 		if ( numMatchingLobes == 0 )
 		{
             o_pdf = 0.0f;
@@ -116,7 +136,7 @@ struct Bsdf
 		///  We'll use one of the two random numbers to pick one of the filtered lobes with equal probability
 		///
 	    const uint selectedLobeIndex = Min( numMatchingLobes - 1, cast(uint) u.x*numMatchingLobes );
-		BaseBxDF* selectedLobe       = filteredLobes[ selectedLobeIndex ];
+		const(BaseBxDF)* selectedLobe       = filteredLobes[ selectedLobeIndex ];
 
 		///  Since we used u.x to select the lobe, we need to remap the u.x value to [0, 1) in order to use it
 		///    for BxDF sampling (we need a uniform random number [0,1)x[0,1) )
@@ -132,6 +152,8 @@ struct Bsdf
 
 		if ( wo.z == 0.0f ) { return F; }
 
+		///  Sample the randomly selected lobe
+		///
 		o_pdf = 0.0f;
 		if (o_sampledTypes) { *o_sampledTypes = selectedLobe.GetType(); }
 		F = selectedLobe.Sample_F( wo, uRemap, wi, &o_pdf, o_sampledTypes );
@@ -145,6 +167,8 @@ struct Bsdf
 		o_world_wi = LocalToWorld( wi );
 		const float invLobeCount = 1.0f/fLobeCount; /// also the probability of selecting a lobe
 
+		///  Average the PDF of all matching lobes
+		///
 		const bool isNotSpecularLobe = (selectedLobe.GetType() & BxDFType.Specular) == 0;
 		if (isNotSpecularLobe && (numMatchingLobes > 1))
 		{
@@ -163,7 +187,8 @@ struct Bsdf
 		    const bool isReflection = (v_dot(o_world_wi, m_geoNormal) * v_dot( world_wo, m_geoNormal)) > 0.0f;
 
 			Spectrum sumF;
-			foreach( lobe; filteredLobes ) {
+			foreach( lobe; filteredLobes )
+			{
 			    const BxDFType lobeType = lobe.GetType();
 				if ( (isReflection  && (lobeType & BxDFType.Reflection   )) ||
 				     (!isReflection && (lobeType & BxDFType.Transmission )) )
@@ -177,7 +202,7 @@ struct Bsdf
 		return F;
 	}
 
-	pure @trusted @nogc nothrow
+	pure const @trusted @nogc nothrow
 	float Pdf( in vec3 world_wo, in vec3 world_wi, BxDFType flags )
 	{
         if ( m_bxdfs.Empty() ) { return 0.0f; }
@@ -189,8 +214,8 @@ struct Bsdf
 
         if ( wo.z == 0.0f ) { return 0.0f; }
 
-		BxDFStack  lobes;
-		const uint matchingLobes = Filter( lobes, flags );
+		BxDFStack lobes = FilterLobes( flags );
+		const uint matchingLobes = lobes.length;
         float pdf = 0.0f;
 		foreach ( lobe; lobes ) {
 		    pdf += lobe.Pdf( wo, wi );
