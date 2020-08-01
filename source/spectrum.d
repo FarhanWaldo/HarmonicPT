@@ -116,6 +116,15 @@ struct CoefficientSpectrum( int NumSpectralSamples )
 	}
 };
 
+pure  @nogc nothrow @safe
+bool IsBlack( in vec3 v )
+{
+	return
+		( v.x == 0.0f ) &&
+		( v.y == 0.0f ) &&
+		( v.z == 0.0f );
+}
+
 pragma(inline, true)
 pure @nogc nothrow @safe
 Spectrum LerpSpectra( float t, in Spectrum s0, in Spectrum s1 )
