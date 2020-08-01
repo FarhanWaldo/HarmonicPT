@@ -271,6 +271,15 @@ Spectrum UniformSampleOneLight(
     return irradiance;
 }
 
+/// Power heuristic (hardcoded with exponent=2) for computing MIS weights
+///
+pure @safe @nogc nothrow
+float PowerHeuristic(int nf, float fPdf, int ng, float gPdf) {
+	float f = nf * fPdf, g = ng * gPdf;
+	return (f * f) / (f * f + g * g);
+}
+
+
 @trusted @nogc nothrow
 Spectrum EstimateDirect(
     in CInteraction refIntx,
@@ -299,15 +308,13 @@ Spectrum EstimateDirect(
 	    Spectrum F;
 		if ( refIntx.m_isSurfaceInteraction )
 		{
-		    auto surfIntx = cast( const(SurfaceInteraction*) )( &refIntx );
+		    auto surfIntx = cast( const(SurfaceInteraction)* )( &refIntx );
 			F = surfIntx.m_bsdf.F( surfIntx.m_wo, wi, bsdfFlags ) * Abs( v_dot( wi, surfIntx.m_shading.n ));
 			scatterPdf = surfIntx.m_bsdf.Pdf( surfIntx.m_wo, wi, bsdfFlags );
-			// F = surfIntx.m_bsdf.Sample_F( surfIntx.m_wo, wi, uScatter, scatterPdf, bsdfFlags, &sampledType );
-			// F *= Abs( v_dot( 
 		}
 		else
 		{
-		    //[TODO]:: medium interaction
+		    //[TODO]:: [medium] interaction
 			//
         }
 
@@ -326,20 +333,78 @@ Spectrum EstimateDirect(
 			if (!irradianceFromLight.IsBlack())
 			{
 			     // TODO:: We don't handle delta lights here.... maybe we should?
+                // if ( light.IsDeltaLight() )
 
-				pure @safe @nogc nothrow
-				float PowerHeuristic(int nf, float fPdf, int ng, float gPdf) {
-					float f = nf * fPdf, g = ng * gPdf;
-					return (f * f) / (f * f + g * g);
-				}
-
+				
 				const float weight = PowerHeuristic( 1, lightPdf, 1, scatterPdf );
 				irradiance += (weight/lightPdf)*F*irradianceFromLight;
 			}
 		}
 	}
 
+    if ( !light.IsDeltaLight() )
+	{
+        Spectrum F;
+		bool sampledSpecularBxdf = false;
 
+		if ( refIntx.m_isSurfaceInteraction )
+		{
+		    BxDFType sampledType;
+			auto surfIntx = cast( const(SurfaceInteraction)* )( &refIntx );
+
+			F = surfIntx.m_bsdf.Sample_F( surfIntx.m_wo, wi, uScatter, scatterPdf, bsdfFlags, &sampledType );
+			F *= Abs(v_dot( wi, surfIntx.m_shading.n  ));
+			sampledSpecularBxdf = (sampledType & BxDFType.Specular) != 0;
+		}
+		else
+		{
+		    //[TODO]:: [medium] interaction
+			//
+        }
+
+		if ( !F.IsBlack() && scatterPdf > 0.0f )
+		{
+		    float weight = 1.0f;
+
+			if ( !sampledSpecularBxdf )
+			{
+			    lightPdf = Light_SamplePdf( light, &refIntx, wi );
+				if ( lightPdf == 0.0f ) { return irradiance; }
+
+				weight = PowerHeuristic( 1, scatterPdf, 1, lightPdf );
+			}
+
+			/// [TODO]:: [medium][volume][transmittance] compute transmittance here
+			///
+			SurfaceInteraction lightSurfIntx;
+			Ray ray = refIntx.CreateRay( wi );
+			Spectrum transmittance = Spectrum( 1.0f );
+
+			const bool foundSurfaceInteraction =
+			    scene.FindClosestIntersection( &ray, lightSurfIntx );
+
+
+			Spectrum lightIrradiance;
+			if ( foundSurfaceInteraction )
+			{
+			    const vec3 wo = -1.0f*wi;
+			    lightIrradiance = GetAreaLightEmission( lightSurfIntx, wo );
+			}
+			/// PBRT uses Light::Le() for this but my old renderer would return an empty spectrum...
+			/// [NOTE] :: Investigate this
+			// else
+			// {
+			//     lightIrradiance = light.CalculateEmission( 
+			// }
+
+			if ( !lightIrradiance.IsBlack() )
+			{
+			    irradiance += F*lightIrradiance*transmittance*(weight/scatterPdf);
+			}
+		}
+
+	}
+	
 	
     return irradiance;
 }

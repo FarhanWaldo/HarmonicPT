@@ -64,6 +64,9 @@ struct LightCommon
 	pure const @nogc @safe nothrow
 	uint           GetNumSamples() { return m_numSamples; }
 
+	pure const @nogc @safe nothrow
+	bool           IsDeltaLight()  { return false; }
+
 	// F_TODO:: Add medium interface
 }
 alias const(LightCommon) CLightCommon;
@@ -149,7 +152,6 @@ DiffuseAreaLight_SampleIrradiance(
 
 	visTester             = VisibilityTester(*refPoint, cast(CInteraction) shapeIntx );
 	
-    // return radiance;
 	return CalculateEmission( areaLight, shapeIntx, -1.0f*o_irradianceDirection );
 }
 
