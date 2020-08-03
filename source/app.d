@@ -1,9 +1,9 @@
-
 import core.memory;
 import std.stdio;
 import std.algorithm;
 import std.math;
 import std.range;
+import std.conv : emplace;
 
 import derelict.sdl2.sdl;
 
@@ -16,7 +16,8 @@ import integrator;
 import shape;
 import sampling;
 import material;
-
+import spectrum;
+import texture;
 
 void main( string[] args)
 {
@@ -151,21 +152,28 @@ void main( string[] args)
 
 	ShapeCommon* MakeSphere( vec3 centre, float radius )
 	{
-	    import std.conv : emplace;
 		return cast(ShapeCommon*) emplace( geoAlloc.Alloc!ShapeSphere(), centre, radius );
 	}
 	PrimCommon* MakeSurfacePrim( ShapeCommon* shp, IMaterial* mtl )
 	{
-	    import std.conv : emplace;
-		return cast(PrimCommon*) emplace( geoAlloc.Alloc!SurfacePrim(), shp, mtl );
+ 		return cast(PrimCommon*) emplace( geoAlloc.Alloc!SurfacePrim(), shp, mtl );
 	}  
 
+    auto texRed = cast(ITexture*) emplace!FlatColour( geoAlloc.AllocClass!FlatColour, Spectrum( 1.0f, 0.0f, 0.0f ) );
+	auto texWhite = cast(ITexture*) emplace!FlatColour( geoAlloc.AllocClass!FlatColour, Spectrum( 1.0f ) );
+
+	auto lambertRed = cast(IMaterial*) emplace!MatteMaterial( geoAlloc.AllocClass!MatteMaterial, texRed );
+	auto lambertWhite = cast(IMaterial*) emplace!MatteMaterial( geoAlloc.AllocClass!MatteMaterial, texWhite );
+	
 	auto sph0 = MakeSphere( vec3( 0.0f ), 1.0f );
-	auto prim0 = MakeSurfacePrim( sph0, nullMtl );
+	auto prim0 = MakeSurfacePrim( sph0, lambertRed );
 	
 	auto sph1 = MakeSphere( vec3( 0.0f, -1001.0f, 0.0f ), 1000.0f );
-	auto prim1 = MakeSurfacePrim( sph1, nullMtl );
+	auto prim1 = MakeSurfacePrim( sph1, lambertWhite );
 
+    auto sph_light = MakeSphere( vec3( 0.0f, 10.0f, 0.0f ), 5.0f );
+	// auto 
+	
 	import datastructures;
 	// auto prims = CreateBuffer!(PrimCommon*)( geoAlloc, 256 );
 	auto primBuffer = BufferT!( PrimCommon*, 512 )();
@@ -187,7 +195,8 @@ void main( string[] args)
     // IIntegrator integrator = new HelloWorldIntegrator( renderCam, &renderImage );
     BaseSampler sampler = new PixelSampler( 32, 0, 4123123 /* random seed */ );
     // IIntegrator integrator = new SamplerIntegrator( &sampler, renderCam, &renderImage );
-    IIntegrator integrator = new WhittedIntegrator( &sampler, renderCam, &renderImage );
+    // IIntegrator integrator = new WhittedIntegrator( &sampler, renderCam, &renderImage );
+	IIntegrator integrator = new DirectLightingIntegrator( &sampler, renderCam, &renderImage );
     integrator.Init( &scene, &rootMemAlloc );
 
     //

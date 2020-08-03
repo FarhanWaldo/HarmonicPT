@@ -1,14 +1,14 @@
+import fwmath;
 import scene;
 import camera;
 import memory;
-import image;
-import sampling;
-import fwmath;
-import interactions;
-import spectrum;
-import light;
 import bxdf;
 import bsdf;
+import light;
+import image;
+import sampling;
+import spectrum;
+import interactions;
 
 interface IIntegrator
 {
@@ -125,6 +125,7 @@ class SamplerIntegrator : IIntegrator
                 foreach ( progression; 0 .. numProgressions )
                 {
                     // const vec2 pixelPos = vec2( cast(float) imageWidth, cast(float) imageHeight );
+					memArena.Reset();
                     const vec2 pixelPos = vec2( cast(float) i, cast(float) j );
                     const vec2 jitteredPos = pixelPos + m_sampler.Get2D();
 
@@ -207,7 +208,7 @@ class DirectLightingIntegrator : SamplerIntegrator
 {
     LightingStrategy m_lightingStrategy;
 
-    this( BaseSampler* sampler, Camera cam, Image_F32* renderBuffer, LightingStrategy lightingStrategy )
+    this( BaseSampler* sampler, Camera cam, Image_F32* renderBuffer, LightingStrategy lightingStrategy=LightingStrategy.UniformSampleOne )
 	{
 		super( sampler, cam, renderBuffer, 1 /* max bounces */ );
 		m_lightingStrategy = lightingStrategy;
@@ -216,7 +217,7 @@ class DirectLightingIntegrator : SamplerIntegrator
 	override Spectrum
 	Irradiance( in Ray ray, Scene* scene, BaseSampler* sampler, IMemAlloc* memArena, int depth = 0 )
 	{
-		Spectrum radiance;
+		Spectrum radiance; // = Spectrum( 1.0f, 0.0f, 0.0f );
 
         SurfaceInteraction surfIntx;
 		if ( scene.FindClosestIntersection( &ray, surfIntx ) )
@@ -228,18 +229,29 @@ class DirectLightingIntegrator : SamplerIntegrator
 
 			if ( m_lightingStrategy == LightingStrategy.UniformSampleAll )
 			{
-			    // TODO::
+			    // TODO:: what are ya doin' mate
 			}
 			else
 			{
-			    
+			    radiance += UniformSampleOneLight( surfIntx, scene, memArena, sampler );
 			}
+		}
+		else
+		{
+		    const vec3 dir = ray.m_dir;
+			const float t = 0.5f*(dir.y+1.0f);
+			const vec3 a = vec3( 0.5f, 0.7f, 1.0f );
+			const vec3 b = vec3( 1.0f, 1.0f, 1.0f );
+			const vec3 colour = Lerp(  t, a, b );
+			radiance = colour;
 		}
 		
 		return radiance;
 	}
 }
 
+/// TODO:: [document]
+///
 @safe @nogc nothrow
 Spectrum UniformSampleOneLight(
     in CInteraction intx,
@@ -279,7 +291,8 @@ float PowerHeuristic(int nf, float fPdf, int ng, float gPdf) {
 	return (f * f) / (f * f + g * g);
 }
 
-
+/// TODO::[document]
+///
 @trusted @nogc nothrow
 Spectrum EstimateDirect(
     in CInteraction refIntx,
@@ -342,6 +355,8 @@ Spectrum EstimateDirect(
 		}
 	}
 
+	/// Do BSDF Sampling and combine with MIS
+	///
     if ( !light.IsDeltaLight() )
 	{
         Spectrum F;
