@@ -19,7 +19,7 @@ struct Interaction
     bool    m_isSurfaceInteraction = false;
 	
 	pure @nogc @safe nothrow
-    this( in ref vec3 pos, in ref vec3 normal, float time )
+    this( in  vec3 pos, in  vec3 normal, float time )
     {
         m_pos       = pos;
         m_normal    = normal;
@@ -72,9 +72,10 @@ struct SurfaceInteraction
     CPrimCommon*      m_prim;
     Bsdf*             m_bsdf;
 
-    this( in ref vec3 pos, in ref vec2 uv, in ref vec3 n,
-          in ref vec3 dpdu, in ref vec3 dpdv,
-          in ref vec3 dndu, in ref vec3 dndv,
+	pure @nogc @safe nothrow
+    this( in  vec3 pos, in  vec2 uv, in  vec3 n,
+          in  vec3 dpdu, in  vec3 dpdv,
+          in  vec3 dndu, in  vec3 dndv,
           float time )
     {
 	    m_isSurfaceInteraction = true;
