@@ -159,19 +159,28 @@ void main( string[] args)
  		return cast(PrimCommon*) emplace( geoAlloc.Alloc!SurfacePrim(), shp, mtl );
 	}  
 
-    auto texRed = cast(ITexture*) emplace!FlatColour( geoAlloc.AllocClass!FlatColour, Spectrum( 1.0f, 0.0f, 0.0f ) );
-	auto texWhite = cast(ITexture*) emplace!FlatColour( geoAlloc.AllocClass!FlatColour, Spectrum( 1.0f ) );
+    // auto texRed = cast(ITexture*) emplace!FlatColour( geoAlloc.AllocClass!FlatColour, Spectrum( 1.0f, 0.0f, 0.0f ) );
+	// auto texWhite = cast(ITexture*) emplace!FlatColour( geoAlloc.AllocClass!FlatColour, Spectrum( 1.0f ) );
 
-	auto lambertRed = cast(IMaterial*) emplace!MatteMaterial( geoAlloc.AllocClass!MatteMaterial, texRed );
-	auto lambertWhite = cast(IMaterial*) emplace!MatteMaterial( geoAlloc.AllocClass!MatteMaterial, texWhite );
+	// auto lambertRed = cast(IMaterial*) emplace!MatteMaterial( geoAlloc.AllocClass!MatteMaterial, texRed );
+	// auto lambertWhite = cast(IMaterial*) emplace!MatteMaterial( geoAlloc.AllocClass!MatteMaterial, texWhite );
+    ITexture texRed = new FlatColour( Spectrum( 1.0f, 0.0f, 0.0f ) );
+	ITexture texWhite = new FlatColour( Spectrum( 1.0f, 1.0f, 1.0f ) );
+
+	IMaterial lambertRed = new MatteMaterial( &texRed );
+	IMaterial lambertWhite = new MatteMaterial( &texWhite );
 	
 	auto sph0 = MakeSphere( vec3( 0.0f ), 1.0f );
-	auto prim0 = MakeSurfacePrim( sph0, lambertRed );
+	sph0.m_shapeType = EShape.Sphere;
+	// auto prim0 = MakeSurfacePrim( sph0, lambertRed );
+	auto prim0 = MakeSurfacePrim( sph0, &lambertRed );
 	
 	auto sph1 = MakeSphere( vec3( 0.0f, -1001.0f, 0.0f ), 1000.0f );
-	auto prim1 = MakeSurfacePrim( sph1, lambertWhite );
+	sph1.m_shapeType = EShape.Sphere;
+	// auto prim1 = MakeSurfacePrim( sph1, lambertWhite );
+	auto prim1 = MakeSurfacePrim( sph1, &lambertWhite );
 
-    auto sph_light = MakeSphere( vec3( 0.0f, 10.0f, 0.0f ), 5.0f );
+    // auto sph_light = MakeSphere( vec3( 0.0f, 10.0f, 0.0f ), 5.0f );
 	// auto 
 	
 	import datastructures;
@@ -196,8 +205,10 @@ void main( string[] args)
     BaseSampler sampler = new PixelSampler( 32, 0, 4123123 /* random seed */ );
     // IIntegrator integrator = new SamplerIntegrator( &sampler, renderCam, &renderImage );
     // IIntegrator integrator = new WhittedIntegrator( &sampler, renderCam, &renderImage );
+	immutable ulong renderMemArenaSizeBytes = MegaBytes( 10 );
+	BaseMemAlloc integratorArena = new StackAlloc( cast(void*) rootMemAlloc.Allocate( renderMemArenaSizeBytes ), renderMemArenaSizeBytes );
 	IIntegrator integrator = new DirectLightingIntegrator( &sampler, renderCam, &renderImage );
-    integrator.Init( &scene, &rootMemAlloc );
+    integrator.Init( &scene, &integratorArena );
 
     //
     //  Event/Render loop
@@ -216,7 +227,7 @@ void main( string[] args)
                 writeln("Performing Render Progression # ", numProgressions, "" );
 
                 renderHasConverged =
-                    integrator.RenderProgression( &scene, &rootMemAlloc );
+                    integrator.RenderProgression( &scene, &integratorArena );
 
                 tonemap();
                 updateSdlDisplayBuffer();
