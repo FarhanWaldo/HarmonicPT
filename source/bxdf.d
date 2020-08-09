@@ -4,6 +4,24 @@ import fwmath;
 import spectrum;
 import sampling;
 
+// enum BxDFType
+// {
+//     None             = 0,
+//     Reflection       = 1 << 0,
+// 	Transmission     = 1 << 1,
+// 	Diffuse          = 1 << 2,
+// 	Glossy           = 1 << 3,
+// 	Specular         = 1 << 4,
+
+// 	All              = Reflection |
+// 	                   Transmission |
+// 					   Diffuse |
+// 					   Glossy |
+// 					   Specular,
+
+//     AllNonSpecular   = All & ~Specular
+// }
+
 enum BxDFType
 {
     None             = 0,
@@ -13,14 +31,21 @@ enum BxDFType
 	Glossy           = 1 << 3,
 	Specular         = 1 << 4,
 
-	All              = Reflection |
-	                   Transmission |
-					   Diffuse |
-					   Glossy |
-					   Specular,
+	// All              = Reflection |
+	//                    Transmission |
+	// 				   Diffuse |
+	// 				   Glossy |
+	// 				   Specular,
 
-    AllNonSpecular   = All & ~Specular
+    // AllNonSpecular   = All & ~Specular
 }
+import std.typecons;
+alias BitFlags!(BxDFType, Yes.unsafe) BxDFTypeFlags;
+// alias BitFlags!(BxDFTypeEnum) BxDFType;
+immutable BxDFTypeFlags BxDFTypeFlags_All =
+	BxDFType.Reflection | BxDFType.Transmission | BxDFType.Diffuse | BxDFType.Glossy | BxDFType.Specular;
+immutable BxDFTypeFlags BxDFTypeFlags_AllNonSpecular = BxDFTypeFlags_All & ~BxDFTypeFlags(BxDFType.Specular);
+
 
 /**
 //
@@ -126,22 +151,28 @@ vec3 FaceForward( in vec3 v, in vec3 n ) {
 //
 abstract class BaseBxDF
 {
-    const BxDFType    m_type;
+    const BxDFTypeFlags    m_typeFlags;
 
     pure @safe @nogc nothrow
-	this( BxDFType type )
+	this( BxDFTypeFlags typeFlags )
 	{
-	    m_type = type;
+	    m_typeFlags = typeFlags;
 	}
 
     pure const @safe @nogc nothrow final
-	BxDFType GetType() { return m_type; }
+	BxDFTypeFlags GetType() { return m_typeFlags; }
 	
-	pure const @safe @nogc nothrow
-	bool MatchesType( BxDFType type ) {
-	    return ( m_type & type ) == m_type;
+	pure const @safe @nogc nothrow final
+	bool MatchesType( BxDFTypeFlags typeFlags ) {
+	    return ( m_typeFlags & typeFlags ) == m_typeFlags;
 	}
 
+    pure const @safe @nogc nothrow final
+	bool IsSpecular()
+	{
+		return ( m_typeFlags & BxDFTypeFlags( BxDFType.Specular ) ) == BxDFTypeFlags(BxDFType.Specular);
+	}
+	    
 	//  BxDF Args:
 	//
 	//  wo = outgoing lighting direction on surface
@@ -175,7 +206,7 @@ abstract class BaseBxDF
 		in vec2     u,
 		ref vec3    o_wi,
 	    float*      o_pdf,
-		BxDFType*   o_sampledType = null )
+		BxDFTypeFlags*   o_sampledType = null )
 	{
         o_wi = CosineSampleHemisphere( u );
 		if ( wo.z < 0.0f ) {
@@ -223,7 +254,7 @@ class LambertBrdf : BaseBxDF
 
     this( Spectrum reflectance )
 	{
-	    super( BxDFType.Diffuse | BxDFType.Reflection );
+	    super( BxDFTypeFlags( BxDFType.Diffuse, BxDFType.Reflection ) );
 		m_R = reflectance;
 	}
 	

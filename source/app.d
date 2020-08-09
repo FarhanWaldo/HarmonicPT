@@ -180,7 +180,12 @@ void main( string[] args)
 	// auto prim1 = MakeSurfacePrim( sph1, lambertWhite );
 	auto prim1 = MakeSurfacePrim( sph1, &lambertWhite );
 
-    // auto sph_light = MakeSphere( vec3( 0.0f, 10.0f, 0.0f ), 5.0f );
+	import light;
+	
+    auto sph_lightGeo = MakeSphere( vec3( 0.0f, 10.0f, 0.0f ), 5.0f );
+	auto sph_light = cast(LightCommon*) emplace( geoAlloc.Alloc!DiffuseAreaLight(), Spectrum( 10.0f ), sph_lightGeo, 10 );
+	auto prim_light = cast(PrimCommon*) emplace( geoAlloc.Alloc!EmissiveSurfacePrim(), sph_lightGeo, nullMtl, sph_light );
+	
 	// auto 
 	
 	import datastructures;
@@ -188,9 +193,10 @@ void main( string[] args)
 	auto primBuffer = BufferT!( PrimCommon*, 512 )();
 	primBuffer.Push( prim0 );
 	primBuffer.Push( prim1 );
+	primBuffer.Push( prim_light );
 
 	PrimArray primList = PrimArray( primBuffer.range() );
-    Scene scene = Scene( primList, [] );       
+    Scene scene = Scene( primList, [ sph_light ] );       
 	
     Camera renderCam;
     Camera_Init( renderCam,

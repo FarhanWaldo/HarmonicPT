@@ -6,7 +6,7 @@ struct BufferT(T, ulong N = 0, bool BOUND_CHECK = true )
 {
     enum IsStatic = N != 0;
 
-	ulong    m_size;
+	ulong    m_size = 0;
 	static if ( IsStatic )
 	{
         T[N]      m_data = void;

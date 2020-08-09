@@ -99,7 +99,6 @@ class SamplerIntegrator : IIntegrator
     override void
     Init( in Scene* scene, IMemAlloc* memArena )
     {
-        // writeln( "HelloWorldIntegrator::Init()!");
     }
 
     override bool
@@ -110,13 +109,15 @@ class SamplerIntegrator : IIntegrator
         const vec2 cameraDims  = vec2( cast(float) imageWidth, cast(float) imageHeight );
 
         float[] renderBuffer = m_renderBuffer.m_pixelData;
-
+		
         // TODO:: Have better pixel filtering
         //
         foreach ( uint j; 0 .. imageHeight )
         {
             foreach( uint i; 0 .. imageWidth )
             {
+				// uint j = imageHeight/2;
+				// uint i = imageWidth/2;
                 // // thread id stuff
                 
                 Spectrum pixelColour = Spectrum(0.0); // = vec3( 0.0, 1.0, 0.0 );
@@ -124,8 +125,6 @@ class SamplerIntegrator : IIntegrator
 
                 foreach ( progression; 0 .. numProgressions )
                 {
-                    // const vec2 pixelPos = vec2( cast(float) imageWidth, cast(float) imageHeight );
-					memArena.Reset();
                     const vec2 pixelPos = vec2( cast(float) i, cast(float) j );
                     const vec2 jitteredPos = pixelPos + m_sampler.Get2D();
 
@@ -133,6 +132,8 @@ class SamplerIntegrator : IIntegrator
                     m_camera.SpawnRay( jitteredPos, cameraDims, cameraRay );
 
                     pixelColour += Irradiance( cameraRay, scene, m_sampler, memArena );
+
+					memArena.Reset();
                 }
 
                 pixelColour *= (1.0/( cast(float) numProgressions ) );
@@ -217,23 +218,27 @@ class DirectLightingIntegrator : SamplerIntegrator
 	override Spectrum
 	Irradiance( in Ray ray, Scene* scene, BaseSampler* sampler, IMemAlloc* memArena, int depth = 0 )
 	{
-		Spectrum radiance; // = Spectrum( 1.0f, 0.0f, 0.0f );
+		Spectrum radiance = Spectrum(0.0f); // = Spectrum( 1.0f, 0.0f, 0.0f );
 
         SurfaceInteraction surfIntx;
 		if ( scene.FindClosestIntersection( &ray, surfIntx ) )
 		{
-            ComputeScatteringFunctions( &surfIntx, memArena, true /* from eyes */, true /* allow multiple lobes */ );
-
+		    if ( surfIntx.m_material != null )
+			{
+                ComputeScatteringFunctions( &surfIntx, memArena, true /* from eyes */, true /* allow multiple lobes */ );
+            }
+			
 			vec3 wo = surfIntx.m_wo;
 			radiance += surfIntx.GetAreaLightEmission( wo );
 
 			if ( m_lightingStrategy == LightingStrategy.UniformSampleAll )
 			{
 			    // TODO:: what are ya doin' mate
+				assert( false, "UniformSampleAll lighting strategy is not supported in the DirectLightingIntegrator" );
 			}
 			else
 			{
-			    radiance += UniformSampleOneLight( surfIntx, scene, memArena, sampler );
+			    radiance += UniformSampleOneLight( cast(CInteraction*) &surfIntx, scene, memArena, sampler );
 			}
 		}
 		else
@@ -254,13 +259,13 @@ class DirectLightingIntegrator : SamplerIntegrator
 ///
 @safe @nogc nothrow
 Spectrum UniformSampleOneLight(
-    in CInteraction intx,
+    CInteraction*   intx,
 	Scene*          scene,
 	IMemAlloc*      memArena,
 	BaseSampler*    sampler,
 	bool            handleMedia = false /* currently unsupported */ )
 {
-    Spectrum irradiance;
+    Spectrum irradiance = Spectrum(0.0f);
 	
     const ulong numLights = scene.m_lights.length;
 	if ( numLights == 0 ) { return irradiance; }
@@ -295,7 +300,7 @@ float PowerHeuristic(int nf, float fPdf, int ng, float gPdf) {
 ///
 @trusted @nogc nothrow
 Spectrum EstimateDirect(
-    in CInteraction refIntx,
+    CInteraction*   refIntx,
 	vec2            uScatter,
 	vec2            uLight,
     CLightCommon*   light,
@@ -305,8 +310,8 @@ Spectrum EstimateDirect(
 	bool            handleSpecular = false,
 	bool            handleMedia = false )
 {
-    Spectrum irradiance;
-    const BxDFType bsdfFlags = handleSpecular ? BxDFType.All : BxDFType.AllNonSpecular;
+    Spectrum irradiance = Spectrum(0.0f);
+    const BxDFTypeFlags bsdfFlags = handleSpecular ? BxDFTypeFlags_All : BxDFTypeFlags_AllNonSpecular;
 
     vec3  wi;
 	float lightPdf;
@@ -314,7 +319,7 @@ Spectrum EstimateDirect(
 
 	VisibilityTester visTester;
 	Spectrum irradianceFromLight =
-	    Light_SampleIrradiance( light, &refIntx, uLight, wi, lightPdf, visTester );
+	    Light_SampleIrradiance( light, refIntx, uLight, wi, lightPdf, visTester );
 	
 	if ( lightPdf > 0.0f && !irradianceFromLight.IsBlack() )
 	{
@@ -359,17 +364,20 @@ Spectrum EstimateDirect(
 	///
     if ( !light.IsDeltaLight() )
 	{
-        Spectrum F;
+        Spectrum F = Spectrum(0.0f);
 		bool sampledSpecularBxdf = false;
 
 		if ( refIntx.m_isSurfaceInteraction )
 		{
-		    BxDFType sampledType;
-			auto surfIntx = cast( const(SurfaceInteraction)* )( &refIntx );
+		    BxDFTypeFlags sampledType;
+			auto surfIntx = cast( const(SurfaceInteraction)* )( refIntx );
 
-			F = surfIntx.m_bsdf.Sample_F( surfIntx.m_wo, wi, uScatter, scatterPdf, bsdfFlags, &sampledType );
-			F *= Abs(v_dot( wi, surfIntx.m_shading.n  ));
-			sampledSpecularBxdf = (sampledType & BxDFType.Specular) != 0;
+			if ( surfIntx.m_bsdf != null )
+			{
+				F = surfIntx.m_bsdf.Sample_F( surfIntx.m_wo, wi, uScatter, scatterPdf, bsdfFlags, &sampledType );
+				F *= Abs(v_dot( wi, surfIntx.m_shading.n  ));
+				sampledSpecularBxdf = (sampledType & BxDFType.Specular) == BxDFTypeFlags(BxDFType.Specular);
+			}
 		}
 		else
 		{
@@ -383,7 +391,7 @@ Spectrum EstimateDirect(
 
 			if ( !sampledSpecularBxdf )
 			{
-			    lightPdf = Light_SamplePdf( light, &refIntx, wi );
+			    lightPdf = Light_SamplePdf( light, refIntx, wi );
 				if ( lightPdf == 0.0f ) { return irradiance; }
 
 				weight = PowerHeuristic( 1, scatterPdf, 1, lightPdf );
@@ -399,7 +407,7 @@ Spectrum EstimateDirect(
 			    scene.FindClosestIntersection( &ray, lightSurfIntx );
 
 
-			Spectrum lightIrradiance;
+			Spectrum lightIrradiance = Spectrum(0.0f); 
 			if ( foundSurfaceInteraction )
 			{
 			    const vec3 wo = -1.0f*wi;

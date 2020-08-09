@@ -16,14 +16,14 @@ alias const(ShapeSphere)     CShapeSphere;
 
 struct ShapeCommon
 {
-    EShape m_shapeType;
+    EShape m_shapeType = EShape.Sphere;
 
 	enum IsShape = true;
 }
 
 struct ShapeSphere
 {
-    ShapeCommon m_common;
+    ShapeCommon m_common = { EShape.Sphere };
 	alias m_common this;
 
     Sphere m_geo;
@@ -292,6 +292,7 @@ void Shape_GetShadingInfo( CShapeCommon* shape, ref SurfaceInteraction surfIntx,
 pure @safe @nogc nothrow
 void Sphere_GetShadingInfo( CShapeSphere* sphere, ref SurfaceInteraction surfIntx, in IntersectionResult intRes )
 {
+	
 	const vec3 p = intRes.m_contactNormal; // intersection point on a unit sphere in origin
 
 	import std.math : atan2, asin, fmod;
@@ -343,7 +344,6 @@ void Sphere_GetShadingInfo( CShapeSphere* sphere, ref SurfaceInteraction surfInt
 								   dndu, dndv,
 								   0.0f /* time */ );
 
-	surfIntx.m_posError = 0.0001* intRes.m_contactPos.abs();
-	
-	
+	surfIntx.m_posError = 0.0001* intRes.m_contactPos.abs(); // TODO::[precision][geometry]
+	 
 }
