@@ -112,14 +112,14 @@ class SamplerIntegrator : IIntegrator
 		
         // TODO:: Have better pixel filtering
         //
-        foreach ( uint j; 0 .. imageHeight )
-        {
-            foreach( uint i; 0 .. imageWidth )
-            {
-				// {{
-				// uint j = imageHeight/2;
-				// uint i = imageWidth/2;
-                // // thread id stuff
+        // foreach ( uint j; 0 .. imageHeight )
+        // {
+        //     foreach( uint i; 0 .. imageWidth )
+        //     {
+				{{
+				uint j = cast(uint) (imageHeight*0.7);
+				uint i = imageWidth/2;
+                // thread id stuff
                 
                 Spectrum pixelColour = Spectrum(0.0); // = vec3( 0.0, 1.0, 0.0 );
                 // // int  nSamples;
@@ -315,9 +315,9 @@ Spectrum EstimateDirect(
     Spectrum irradiance = Spectrum(0.0f);
     const BxDFTypeFlags bsdfFlags = handleSpecular ? BxDFTypeFlags_All : BxDFTypeFlags_AllNonSpecular;
 
-    vec3  wi;
-	float lightPdf;
-	float scatterPdf;
+    vec3  wi = vec3();
+	float lightPdf = 0.0f;
+	float scatterPdf = 0.0f;
 
 	VisibilityTester visTester;
 	Spectrum irradianceFromLight =
@@ -325,7 +325,7 @@ Spectrum EstimateDirect(
 	
 	if ( lightPdf > 0.0f && !irradianceFromLight.IsBlack() )
 	{
-	    Spectrum F;
+	    Spectrum F = Spectrum(0.0f);
 		if ( refIntx.m_isSurfaceInteraction )
 		{
 			auto surfIntx = cast( const(SurfaceInteraction)* )( refIntx );

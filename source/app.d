@@ -182,7 +182,7 @@ void main( string[] args)
 
 	import light;
 	
-    auto sph_lightGeo = MakeSphere( vec3( 0.0f, 10.0f, 5.0f ), 5.0f );
+    auto sph_lightGeo = MakeSphere( vec3( 0.0f, 5.0f, 0.0f ), 1.0f );
 	auto sph_light = cast(LightCommon*) emplace( geoAlloc.Alloc!DiffuseAreaLight(), Spectrum( 100.0f ), sph_lightGeo, 10 );
 	auto prim_light = cast(PrimCommon*) emplace( geoAlloc.Alloc!EmissiveSurfacePrim(), sph_lightGeo, nullMtl, sph_light );
 	
@@ -191,7 +191,7 @@ void main( string[] args)
 	import datastructures;
 	// auto prims = CreateBuffer!(PrimCommon*)( geoAlloc, 256 );
 	auto primBuffer = BufferT!( PrimCommon*, 512 )();
-	primBuffer.Push( prim0 );
+	// primBuffer.Push( prim0 );
 	primBuffer.Push( prim1 );
 	primBuffer.Push( prim_light );
 
