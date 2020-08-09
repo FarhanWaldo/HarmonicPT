@@ -31,7 +31,7 @@ void main( string[] args)
     float* pImageBufferData;
 	ubyte* pDisplayBufferData;
 
-	float whitepoint = 2.0f;
+	float whitepoint = 10.0f;
 	
     // Create global memory allocator
     //
@@ -132,9 +132,9 @@ void main( string[] args)
 
                 // F_TODO:: sqrt approximates linear -> gamme space conversion
                 //
-                pDisplayBufferData[ pixelIndex ] 		= cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex ] / whitepoint ) ) * 255.0f );
-                pDisplayBufferData[ pixelIndex  + 1 ] 	= cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex + 1 ] / whitepoint ) ) * 255.0f );
-                pDisplayBufferData[ pixelIndex  + 2 ] 	= cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex + 2 ] / whitepoint ) ) * 255.0f );
+                pDisplayBufferData[ pixelIndex ] 		= cast(ubyte) Min( 255, ( sqrt( ( pImageBufferData[ pixelIndex ] / whitepoint ) ) * 255.0f ) );
+                pDisplayBufferData[ pixelIndex  + 1 ] 	= cast(ubyte) Min( 255, ( sqrt( ( pImageBufferData[ pixelIndex + 1 ] / whitepoint ) ) * 255.0f ) );
+                pDisplayBufferData[ pixelIndex  + 2 ] 	= cast(ubyte) Min( 255, ( sqrt( ( pImageBufferData[ pixelIndex + 2 ] / whitepoint ) ) * 255.0f ) );
             }
         }
     }
@@ -182,8 +182,8 @@ void main( string[] args)
 
 	import light;
 	
-    auto sph_lightGeo = MakeSphere( vec3( 0.0f, 10.0f, 0.0f ), 5.0f );
-	auto sph_light = cast(LightCommon*) emplace( geoAlloc.Alloc!DiffuseAreaLight(), Spectrum( 10.0f ), sph_lightGeo, 10 );
+    auto sph_lightGeo = MakeSphere( vec3( 0.0f, 10.0f, 5.0f ), 5.0f );
+	auto sph_light = cast(LightCommon*) emplace( geoAlloc.Alloc!DiffuseAreaLight(), Spectrum( 100.0f ), sph_lightGeo, 10 );
 	auto prim_light = cast(PrimCommon*) emplace( geoAlloc.Alloc!EmissiveSurfacePrim(), sph_lightGeo, nullMtl, sph_light );
 	
 	// auto 

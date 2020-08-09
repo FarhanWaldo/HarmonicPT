@@ -116,6 +116,7 @@ class SamplerIntegrator : IIntegrator
         {
             foreach( uint i; 0 .. imageWidth )
             {
+				// {{
 				// uint j = imageHeight/2;
 				// uint i = imageWidth/2;
                 // // thread id stuff

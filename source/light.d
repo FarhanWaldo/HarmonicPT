@@ -101,16 +101,23 @@ Spectrum CalculateEmission( CLightCommon* light, in Interaction intx, in vec3 wo
 			return CalculateEmission( areaLight, intx, wo );
 	
 	    default:
-		return Spectrum();
+		return Spectrum(0.0f);
 	}
 }
 
 pure @nogc @safe nothrow
 Spectrum CalculateEmission( CDiffuseAreaLight* light,  in Interaction intx, in vec3 wo )
 {
-	return ( v_dot( intx.m_normal, wo ) > 0.0f ) ? light.m_emission : Spectrum( 0.0f );
-}
+	// return ( v_dot( intx.m_normal, wo ) > 0.0f ) ? light.m_emission : Spectrum( 0.0f );
+	const float dot = v_dot( intx.m_normal, wo );
+	const bool  facingLight = dot > 0.0f;
+	if ( facingLight )
+	{
+	    return light.m_emission;
+	}
 
+	return Spectrum( 0.0f );
+}
 
 
 pure @nogc @trusted nothrow

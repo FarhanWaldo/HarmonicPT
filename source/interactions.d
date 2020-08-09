@@ -113,7 +113,13 @@ Spectrum GetAreaLightEmission( in SurfaceInteraction surfIntx, in ref vec3 wo )
 {
     LightCommon* light = Prim_GetLight( surfIntx.m_prim );
     
-    return ( light != null ) ? CalculateEmission( light, surfIntx, wo ) : Spectrum(0.0f);
+    // return ( light != null ) ? CalculateEmission( light, surfIntx, wo ) : Spectrum(0.0f);
+	if ( light != null )
+	{
+	    return CalculateEmission( light, surfIntx, wo );
+	}
+
+	return Spectrum( 0.0f );
 }
 
 
