@@ -102,7 +102,8 @@ struct Bsdf
 		Spectrum sumF = Spectrum(0.0f);
 		
 		const BxDFStack lobes = FilterLobes( flags );
-		foreach( lobe; lobes ) {
+		const ulong lobeCount = lobes.GetCount();
+		foreach( lobe; lobes[0..lobeCount] ) {
 
 			const BxDFTypeFlags lobeTypeFlags = lobe.GetType();
 			if ( (isReflection  && (lobeTypeFlags & BxDFType.Reflection   )) ||
@@ -226,7 +227,7 @@ struct Bsdf
 		BxDFStack lobes = FilterLobes( flags );
 		const uint matchingLobes = cast(uint) lobes.GetCount();
         float pdf = 0.0f;
-		foreach ( lobe; lobes ) {
+		foreach ( lobe; lobes[0..matchingLobes] ) {
 		    pdf += lobe.Pdf( wo, wi );
 		}
 

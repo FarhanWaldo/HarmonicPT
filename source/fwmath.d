@@ -154,15 +154,15 @@ unittest
 		float b = 1.0f;
 
 		Swap( a, b );
-		static assert( ( a == 1.0f ) && ( b == 0.0f ) );
+		assert( ( a == 1.0f ) && ( b == 0.0f ) );
 	}
 
     {
 	    double a = 0.0;
 		double b = 1.0;
 
-		Swap( a, b )
-		static assert( ( a == 1.0 ) && ( b == 0.0 ) );
+		Swap( a, b );
+		assert( ( a == 1.0 ) && ( b == 0.0 ) );
 	}
 
 }

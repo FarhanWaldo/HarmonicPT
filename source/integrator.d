@@ -221,6 +221,7 @@ class DirectLightingIntegrator : SamplerIntegrator
 		Spectrum radiance = Spectrum(0.0f); // = Spectrum( 1.0f, 0.0f, 0.0f );
 
         SurfaceInteraction surfIntx;
+		surfIntx.m_material = null;
 		if ( scene.FindClosestIntersection( &ray, surfIntx ) )
 		{
 		    if ( surfIntx.m_material != null )
@@ -326,7 +327,7 @@ Spectrum EstimateDirect(
 	    Spectrum F;
 		if ( refIntx.m_isSurfaceInteraction )
 		{
-		    auto surfIntx = cast( const(SurfaceInteraction)* )( &refIntx );
+			auto surfIntx = cast( const(SurfaceInteraction)* )( refIntx );
 			F = surfIntx.m_bsdf.F( surfIntx.m_wo, wi, bsdfFlags ) * Abs( v_dot( wi, surfIntx.m_shading.n ));
 			scatterPdf = surfIntx.m_bsdf.Pdf( surfIntx.m_wo, wi, bsdfFlags );
 		}
