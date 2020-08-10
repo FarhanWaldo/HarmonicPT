@@ -211,7 +211,7 @@ void main( string[] args)
     BaseSampler sampler = new PixelSampler( 32, 0, 4123123 /* random seed */ );
     // IIntegrator integrator = new SamplerIntegrator( &sampler, renderCam, &renderImage );
     // IIntegrator integrator = new WhittedIntegrator( &sampler, renderCam, &renderImage );
-	immutable ulong renderMemArenaSizeBytes = MegaBytes( 10 );
+	immutable ulong renderMemArenaSizeBytes = MegaBytes( 1 );
 	BaseMemAlloc integratorArena = new StackAlloc( cast(void*) rootMemAlloc.Allocate( renderMemArenaSizeBytes ), renderMemArenaSizeBytes );
 	IIntegrator integrator = new DirectLightingIntegrator( &sampler, renderCam, &renderImage );
     integrator.Init( &scene, &integratorArena );
