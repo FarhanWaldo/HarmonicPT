@@ -36,7 +36,7 @@ struct Bsdf
 	}
 
 	pure const @safe @nogc nothrow
-	uint NumComponents( BxDFTypeFlags flags = BxDFTypeFlags_All )
+	uint NumComponents( BxDFType flags = BxDFType_All )
 	{
 	    uint numMatching = 0;
 		foreach( bxdf; m_bxdfs.range() ) {
@@ -48,7 +48,7 @@ struct Bsdf
 	}
 
     pure const @trusted @nogc nothrow
-	void Filter( ref BxDFStack filteredLobes, BxDFTypeFlags flags )
+	void Filter( ref BxDFStack filteredLobes, BxDFType flags )
 	{
 		foreach( bxdf; m_bxdfs.range() ) {
 			// if( bxdf.MatchesType( flags ) ) {
@@ -61,7 +61,7 @@ struct Bsdf
         Returns a new BxDFStack with only the lobes that match against flags
 	 */
 	pure const @trusted @nogc nothrow
-	BxDFStack FilterLobes( BxDFTypeFlags flags ) {
+	BxDFStack FilterLobes( BxDFType flags ) {
 		BxDFStack filteredLobes;
 		const ulong numLobes = m_bxdfs.GetCount();
         foreach( bxdf; m_bxdfs[0..numLobes] ) {
@@ -92,7 +92,7 @@ struct Bsdf
 	}
 
     pure const @safe @nogc nothrow
-	Spectrum F( in vec3 world_wo, in vec3 world_wi, BxDFTypeFlags flags )
+	Spectrum F( in vec3 world_wo, in vec3 world_wi, BxDFType flags )
 	{
 	    const vec3 wo = v_normalise( WorldToLocal( world_wo ) );
 		const vec3 wi = v_normalise( WorldToLocal( world_wi ) );
@@ -105,9 +105,9 @@ struct Bsdf
 		const ulong lobeCount = lobes.GetCount();
 		foreach( lobe; lobes[0..lobeCount] ) {
 
-			const BxDFTypeFlags lobeTypeFlags = lobe.GetType();
-			if ( (isReflection  && (lobeTypeFlags & BxDFType.Reflection   )) ||
-				 (!isReflection && (lobeTypeFlags & BxDFType.Transmission )) )
+			const BxDFType lobeTypeFlags = lobe.GetType();
+			if ( (isReflection  && (lobeTypeFlags & BxDFType_Reflection   )) ||
+				 (!isReflection && (lobeTypeFlags & BxDFType_Transmission )) )
 			{
 				 sumF += lobe.F( wo, wi );
 			}
@@ -121,8 +121,8 @@ struct Bsdf
 					   ref vec3  o_world_wi,
 					   in vec2   u,
 					   ref float o_pdf,
-					   BxDFTypeFlags  flags,
-					   BxDFTypeFlags* o_sampledTypes = null )
+					   BxDFType  flags,
+					   BxDFType* o_sampledTypes = null )
 	{
 		Spectrum F = Spectrum(0.0f);
 
@@ -135,7 +135,7 @@ struct Bsdf
             o_pdf = 0.0f;
 			if ( o_sampledTypes )
 			{
-			    *o_sampledTypes = BxDFType.None;
+			    *o_sampledTypes = BxDFType_None;
 				
 			}
 		
@@ -170,7 +170,7 @@ struct Bsdf
 
 		if ( o_pdf == 0.0f )
 		{
-		    if ( o_sampledTypes ) { *o_sampledTypes = BxDFType.None; }
+		    if ( o_sampledTypes ) { *o_sampledTypes = BxDFType_None; }
 			return F;
 		}
 
@@ -199,9 +199,9 @@ struct Bsdf
 			Spectrum sumF = Spectrum(0.0f);
 			foreach( lobe; filteredLobes[0..numMatchingLobes] )
 			{
-			    const BxDFTypeFlags lobeType = lobe.GetType();
-				if ( (isReflection  && (lobeType & BxDFType.Reflection   )) ||
-				     (!isReflection && (lobeType & BxDFType.Transmission )) )
+			    const BxDFType lobeType = lobe.GetType();
+				if ( (isReflection  && (lobeType & BxDFType_Reflection   )) ||
+				     (!isReflection && (lobeType & BxDFType_Transmission )) )
 			    {
 					 sumF += lobe.F( wo, wi );
 				}
@@ -213,7 +213,7 @@ struct Bsdf
 	}
 
 	pure const @trusted @nogc nothrow
-	float Pdf( in vec3 world_wo, in vec3 world_wi, BxDFTypeFlags flags )
+	float Pdf( in vec3 world_wo, in vec3 world_wi, BxDFType flags )
 	{
         if ( m_bxdfs.Empty() ) { return 0.0f; }
 

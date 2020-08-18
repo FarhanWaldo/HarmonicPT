@@ -4,25 +4,8 @@ import fwmath;
 import spectrum;
 import sampling;
 
-// enum BxDFType
-// {
-//     None             = 0,
-//     Reflection       = 1 << 0,
-// 	Transmission     = 1 << 1,
-// 	Diffuse          = 1 << 2,
-// 	Glossy           = 1 << 3,
-// 	Specular         = 1 << 4,
 
-// 	All              = Reflection |
-// 	                   Transmission |
-// 					   Diffuse |
-// 					   Glossy |
-// 					   Specular,
-
-//     AllNonSpecular   = All & ~Specular
-// }
-
-enum BxDFType
+enum BxDFTypeFlag
 {
     None             = 0,
     Reflection       = 1 << 0,
@@ -30,21 +13,19 @@ enum BxDFType
 	Diffuse          = 1 << 2,
 	Glossy           = 1 << 3,
 	Specular         = 1 << 4,
-
-	// All              = Reflection |
-	//                    Transmission |
-	// 				   Diffuse |
-	// 				   Glossy |
-	// 				   Specular,
-
-    // AllNonSpecular   = All & ~Specular
 }
 import std.typecons;
-alias BitFlags!(BxDFType, Yes.unsafe) BxDFTypeFlags;
-// alias BitFlags!(BxDFTypeEnum) BxDFType;
-immutable BxDFTypeFlags BxDFTypeFlags_All =
-	BxDFType.Reflection | BxDFType.Transmission | BxDFType.Diffuse | BxDFType.Glossy | BxDFType.Specular;
-immutable BxDFTypeFlags BxDFTypeFlags_AllNonSpecular = BxDFTypeFlags_All & ~BxDFTypeFlags(BxDFType.Specular);
+alias BitFlags!(BxDFTypeFlag, Yes.unsafe) BxDFType;
+
+enum BxDFType BxDFType_None         = BxDFTypeFlag.None;
+enum BxDFType BxDFType_Reflection   = BxDFTypeFlag.Reflection;
+enum BxDFType BxDFType_Transmission = BxDFTypeFlag.Transmission;
+enum BxDFType BxDFType_Diffuse      = BxDFTypeFlag.Diffuse;
+enum BxDFType BxDFType_Glossy       = BxDFTypeFlag.Glossy;
+enum BxDFType BxDFType_Specular     = BxDFTypeFlag.Specular;
+enum BxDFType BxDFType_All =
+	BxDFType_Reflection | BxDFType_Transmission | BxDFType_Diffuse | BxDFType_Glossy | BxDFType_Specular;
+enum BxDFType BxDFType_AllNonSpecular = BxDFType_All & ~BxDFType_Specular;
 
 
 /**
@@ -151,26 +132,26 @@ vec3 FaceForward( in vec3 v, in vec3 n ) {
 //
 abstract class BaseBxDF
 {
-    const BxDFTypeFlags    m_typeFlags;
+    const BxDFType    m_type;
 
     pure @safe @nogc nothrow
-	this( BxDFTypeFlags typeFlags )
+	this( BxDFType typeFlags )
 	{
-	    m_typeFlags = typeFlags;
+	    m_type = typeFlags;
 	}
 
     pure const @safe @nogc nothrow final
-	BxDFTypeFlags GetType() { return m_typeFlags; }
+	BxDFType GetType() { return m_type; }
 	
 	pure const @safe @nogc nothrow final
-	bool MatchesType( BxDFTypeFlags typeFlags ) {
-	    return ( m_typeFlags & typeFlags ) == m_typeFlags;
+	bool MatchesType( BxDFType typeFlags ) {
+	    return ( m_type & typeFlags ) == m_type;
 	}
 
     pure const @safe @nogc nothrow final
 	bool IsSpecular()
 	{
-		return ( m_typeFlags & BxDFTypeFlags( BxDFType.Specular ) ) == BxDFTypeFlags(BxDFType.Specular);
+		return ( m_type & BxDFType_Specular ) == BxDFType_Specular;
 	}
 	    
 	//  BxDF Args:
@@ -206,7 +187,7 @@ abstract class BaseBxDF
 		in vec2     u,
 		ref vec3    o_wi,
 	    float*      o_pdf,
-		BxDFTypeFlags*   o_sampledType = null )
+		BxDFType*   o_sampledType = null )
 	{
         o_wi = CosineSampleHemisphere( u );
 		if ( wo.z < 0.0f ) {
@@ -230,7 +211,7 @@ abstract class BaseBxDF
 
 
 	/// F_TODO:: Add default routines for calculating hemispherical reflectances below
-	///
+	///`
 	/**
         Compute the Hemispherical-Directional reflectance on the surface in the direction wo
         The integral of the BDRF toward wo over the hemisphere of incoming directions
@@ -254,7 +235,7 @@ class LambertBrdf : BaseBxDF
 
     this( Spectrum reflectance )
 	{
-	    super( BxDFTypeFlags( BxDFType.Diffuse, BxDFType.Reflection ) );
+	    super( BxDFType_Diffuse | BxDFType_Reflection );
 		m_R = reflectance;
 	}
 	

@@ -316,7 +316,7 @@ Spectrum EstimateDirect(
 	bool            handleMedia = false )
 {
     Spectrum irradiance = Spectrum(0.0f);
-    const BxDFTypeFlags bsdfFlags = handleSpecular ? BxDFTypeFlags_All : BxDFTypeFlags_AllNonSpecular;
+    const BxDFType bsdfFlags = handleSpecular ? BxDFType_All : BxDFType_AllNonSpecular;
 
     vec3  wi = vec3(0.0f);
 	float lightPdf = 0.0f;
@@ -376,14 +376,14 @@ Spectrum EstimateDirect(
 
 		if ( refIntx.m_isSurfaceInteraction )
 		{
-		    BxDFTypeFlags sampledType;
+		    BxDFType sampledType;
 			auto surfIntx = cast( const(SurfaceInteraction)* )( refIntx );
 
 			if ( surfIntx.m_bsdf != null )
 			{
 				F = surfIntx.m_bsdf.Sample_F( surfIntx.m_wo, wi, uScatter, scatterPdf, bsdfFlags, &sampledType );
 				F *= Abs(v_dot( wi, surfIntx.m_shading.n  ));
-				sampledSpecularBxdf = (sampledType & BxDFType.Specular) == BxDFTypeFlags(BxDFType.Specular);
+				sampledSpecularBxdf = (sampledType & BxDFType_Specular) == BxDFType_Specular;
 			}
 		}
 		else
