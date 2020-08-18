@@ -116,7 +116,8 @@ Spectrum CalculateEmission( CDiffuseAreaLight* light,  in Interaction intx, in v
 	    return light.m_emission;
 	}
 
-	return Spectrum( 0.0f );
+	// return Spectrum( 0.0f );
+	return light.m_emission;
 }
 
 

@@ -75,7 +75,10 @@ T* Alloc(T, T_Alloc)( ref T_Alloc alloc )
 pragma(inline, true) @nogc nothrow
 void[] AllocClass(T, T_Alloc)( ref T_Alloc alloc )
 {
-	return alloc.Allocate( T.sizeof );
+	import std.traits : classInstanceAlignment;
+    const ulong classSizeBytes = __traits(classInstanceSize, T);
+	const ulong alignment = classInstanceAlignment!T;
+	return alloc.Allocate( classSizeBytes, alignment );
 }
 
 pragma(inline,true)

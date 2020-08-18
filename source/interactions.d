@@ -31,7 +31,7 @@ struct Interaction
     {
         Ray newRay = void;
 
-        newRay.m_origin = m_pos * 10.0f*EPSILON*m_normal; // TODO:: Do better than arbitrary multiplying by 10*EPSILON
+        newRay.m_origin = m_pos + 10.0f*EPSILON*m_normal; // TODO:: Do better than arbitrary multiplying by 10*EPSILON
         newRay.m_dir    = v_normalise( dir );
         newRay.m_maxT   = float.max;
 
@@ -42,7 +42,7 @@ struct Interaction
     pure const @nogc @safe nothrow
 	Ray CreateRayTo( in ref vec3 endPoint )
     {
-        vec3 offsetPos = m_pos + EPSILON*m_normal;
+        vec3 offsetPos = m_pos + 10.0f* EPSILON*m_normal;
         Ray newRay = CreateFiniteRaySegment( offsetPos, endPoint );
         newRay.m_maxT = newRay.m_maxT - 0.0001f; // TODO:: Find a way to deal with this robustly
 

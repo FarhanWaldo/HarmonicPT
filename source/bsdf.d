@@ -51,9 +51,9 @@ struct Bsdf
 	void Filter( ref BxDFStack filteredLobes, BxDFTypeFlags flags )
 	{
 		foreach( bxdf; m_bxdfs.range() ) {
-			if( bxdf.MatchesType( flags ) ) {
+			// if( bxdf.MatchesType( flags ) ) {
 				filteredLobes.Push( bxdf );
-			}
+			// }
 		}
 	}
 	
@@ -65,9 +65,9 @@ struct Bsdf
 		BxDFStack filteredLobes;
 		const ulong numLobes = m_bxdfs.GetCount();
         foreach( bxdf; m_bxdfs[0..numLobes] ) {
-			if ( bxdf.MatchesType(flags) ) {
+			// if ( bxdf.MatchesType(flags) ) {
 				filteredLobes.Push( bxdf );
-			}
+			// }
 		}
 		return filteredLobes;
 	}
@@ -183,7 +183,7 @@ struct Bsdf
 		if (isNotSpecularLobe && (numMatchingLobes > 1))
 		{
 		    float sumPdf = 0.0f;
-			foreach( lobe; filteredLobes.range() )
+			foreach( lobe; filteredLobes[0..numMatchingLobes] )
 			{
 			    sumPdf += lobe.Pdf( wo, wi );
 			}
@@ -197,7 +197,7 @@ struct Bsdf
 		    const bool isReflection = (v_dot(o_world_wi, m_geoNormal) * v_dot( world_wo, m_geoNormal)) > 0.0f;
 
 			Spectrum sumF = Spectrum(0.0f);
-			foreach( lobe; filteredLobes )
+			foreach( lobe; filteredLobes[0..numMatchingLobes] )
 			{
 			    const BxDFTypeFlags lobeType = lobe.GetType();
 				if ( (isReflection  && (lobeType & BxDFType.Reflection   )) ||

@@ -112,14 +112,12 @@ class SamplerIntegrator : IIntegrator
 		
         // TODO:: Have better pixel filtering
         //
-        // foreach ( uint j; 0 .. imageHeight )
-        // {
-        //     foreach( uint i; 0 .. imageWidth )
-        //     {
-				{{
-				uint j = cast(uint) (imageHeight*0.7);
-				uint i = imageWidth/2;
-                // thread id stuff
+        foreach ( uint j; 0 .. imageHeight )
+        {
+            foreach( uint i; 0 .. imageWidth )
+            {
+				// {{
+                // // thread id stuff
                 
                 Spectrum pixelColour = Spectrum(0.0); // = vec3( 0.0, 1.0, 0.0 );
                 // // int  nSamples;
@@ -233,6 +231,11 @@ class DirectLightingIntegrator : SamplerIntegrator
 			vec3 wo = surfIntx.m_wo;
 			radiance += surfIntx.GetAreaLightEmission( wo );
 
+			// // DEBUG::  display surface normal in world space [-1,1]^3 -> [0,1]^3
+		    // const vec3 surfaceN = v_normalise( surfIntx.m_normal );
+			// const vec3 colourN = vec3(0.5f) + 0.5f*surfaceN;
+			// radiance = colourN;
+
 			if ( m_lightingStrategy == LightingStrategy.UniformSampleAll )
 			{
 			    // TODO:: what are ya doin' mate
@@ -242,6 +245,7 @@ class DirectLightingIntegrator : SamplerIntegrator
 			{
 			    radiance += UniformSampleOneLight( cast(CInteraction*) &surfIntx, scene, memArena, sampler );
 			}
+			
 		}
 		else
 		{
@@ -286,7 +290,6 @@ Spectrum UniformSampleOneLight(
 										 true /* handle spec */,
 										 false /* handle media */ );
 	
-	
     return irradiance;
 }
 
@@ -315,13 +318,15 @@ Spectrum EstimateDirect(
     Spectrum irradiance = Spectrum(0.0f);
     const BxDFTypeFlags bsdfFlags = handleSpecular ? BxDFTypeFlags_All : BxDFTypeFlags_AllNonSpecular;
 
-    vec3  wi = vec3();
+    vec3  wi = vec3(0.0f);
 	float lightPdf = 0.0f;
 	float scatterPdf = 0.0f;
 
 	VisibilityTester visTester;
 	Spectrum irradianceFromLight =
 	    Light_SampleIrradiance( light, refIntx, uLight, wi, lightPdf, visTester );
+
+    irradianceFromLight = Spectrum(10.0f);
 	
 	if ( lightPdf > 0.0f && !irradianceFromLight.IsBlack() )
 	{

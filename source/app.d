@@ -31,7 +31,7 @@ void main( string[] args)
     float* pImageBufferData;
 	ubyte* pDisplayBufferData;
 
-	float whitepoint = 10.0f;
+	float whitepoint = 2.0f;
 	
     // Create global memory allocator
     //
@@ -175,15 +175,15 @@ void main( string[] args)
 	// auto prim0 = MakeSurfacePrim( sph0, lambertRed );
 	auto prim0 = MakeSurfacePrim( sph0, &lambertRed );
 	
-	auto sph1 = MakeSphere( vec3( 0.0f, -1001.0f, 0.0f ), 1000.0f );
+	auto sph1 = MakeSphere( vec3( 0.0f, -501.0f, 0.0f ), 500.0f ); /// F_TODO:: Missing intersections at top of sphere once r >= 500
 	sph1.m_shapeType = EShape.Sphere;
 	// auto prim1 = MakeSurfacePrim( sph1, lambertWhite );
 	auto prim1 = MakeSurfacePrim( sph1, &lambertWhite );
 
 	import light;
 	
-    auto sph_lightGeo = MakeSphere( vec3( 0.0f, 5.0f, 0.0f ), 1.0f );
-	auto sph_light = cast(LightCommon*) emplace( geoAlloc.Alloc!DiffuseAreaLight(), Spectrum( 100.0f ), sph_lightGeo, 10 );
+    auto sph_lightGeo = MakeSphere( vec3( 0.0f, 10.0f, 0.0f ), 5.0f );
+	auto sph_light = cast(LightCommon*) emplace( geoAlloc.Alloc!DiffuseAreaLight(), Spectrum( 100.0f ), sph_lightGeo, 10 /* num samples */ );
 	auto prim_light = cast(PrimCommon*) emplace( geoAlloc.Alloc!EmissiveSurfacePrim(), sph_lightGeo, nullMtl, sph_light );
 	
 	// auto 
@@ -208,7 +208,7 @@ void main( string[] args)
                  0.1, 10000.0f );
 
     // IIntegrator integrator = new HelloWorldIntegrator( renderCam, &renderImage );
-    BaseSampler sampler = new PixelSampler( 32, 0, 4123123 /* random seed */ );
+    BaseSampler sampler = new PixelSampler( 32, 0, 43123 /* random seed */ );
     // IIntegrator integrator = new SamplerIntegrator( &sampler, renderCam, &renderImage );
     // IIntegrator integrator = new WhittedIntegrator( &sampler, renderCam, &renderImage );
 	immutable ulong renderMemArenaSizeBytes = MegaBytes( 1 );

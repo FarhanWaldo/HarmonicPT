@@ -189,8 +189,6 @@ pure @nogc @safe nothrow
 Interaction
 Sphere_Sample( CShapeSphere* sphere, CInteraction* refPoint, in vec2 randomSample )
 {
-    /// F_TODO:: Implement this sampling function, then DiffuseAreaLight_SampleIrradiance
-	///
     const vec3  centre = sphere.m_geo.m_centre;
     const float r      = sphere.m_geo.m_radius;
 	const float r2     = r*r; // radius rsquared
