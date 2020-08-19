@@ -32,12 +32,10 @@ class MatteMaterial : IMaterial
 									 bool                transportFromEye,
 									 bool                allowMultipleLobes )
 	{
-		si.m_bsdf = cast(Bsdf*) emplace( memArena.Alloc!Bsdf(), si.m_normal, si.m_shading.n, si.m_shading.dpdu );
+		si.m_bsdf = memArena.AllocInstance!Bsdf( si.m_normal, si.m_shading.n, si.m_shading.dpdu );
 
 		Spectrum reflectance = m_albedo.Sample( si.m_uv, si.m_pos );
-        // si.m_bsdf.AddBxDF( cast(BaseBxDF*) emplace!LambertBrdf( memArena.AllocClass!LambertBrdf(), reflectance ) );
-		// const BaseBxDF* lambertLobe = [new LambertBrdf( reflectance )].ptr;
-		const(BaseBxDF)* lambertLobe = [emplace!LambertBrdf( memArena.AllocClass!LambertBrdf(), reflectance )].ptr;
+		const (BaseBxDF)* lambertLobe = memArena.AllocInstance!LambertBrdf( reflectance );
 		si.m_bsdf.AddBxDF( lambertLobe );
 	}
 	

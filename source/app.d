@@ -152,23 +152,18 @@ void main( string[] args)
 
 	ShapeCommon* MakeSphere( vec3 centre, float radius )
 	{
-		return cast(ShapeCommon*) emplace( geoAlloc.Alloc!ShapeSphere(), centre, radius );
+		return cast(ShapeCommon*) AllocInstance!ShapeSphere( geoAlloc, centre, radius );
 	}
 	PrimCommon* MakeSurfacePrim( ShapeCommon* shp, IMaterial* mtl )
 	{
- 		return cast(PrimCommon*) emplace( geoAlloc.Alloc!SurfacePrim(), shp, mtl );
+		return cast(PrimCommon*) geoAlloc.AllocInstance!SurfacePrim( shp, mtl );
 	}  
 
-    // auto texRed = cast(ITexture*) emplace!FlatColour( geoAlloc.AllocClass!FlatColour, Spectrum( 1.0f, 0.0f, 0.0f ) );
-	// auto texWhite = cast(ITexture*) emplace!FlatColour( geoAlloc.AllocClass!FlatColour, Spectrum( 1.0f ) );
-
-	// auto lambertRed = cast(IMaterial*) emplace!MatteMaterial( geoAlloc.AllocClass!MatteMaterial, texRed );
-	// auto lambertWhite = cast(IMaterial*) emplace!MatteMaterial( geoAlloc.AllocClass!MatteMaterial, texWhite );
     ITexture texRed = new FlatColour( Spectrum( 1.0f, 0.0f, 0.0f ) );
 	ITexture texWhite = new FlatColour( Spectrum( 1.0f, 1.0f, 1.0f ) );
 
-	IMaterial lambertRed = new MatteMaterial( &texRed );
-	IMaterial lambertWhite = new MatteMaterial( &texWhite );
+	IMaterial lambertRed = *geoAlloc.AllocInstance!MatteMaterial( &texRed );
+	IMaterial lambertWhite = *geoAlloc.AllocInstance!MatteMaterial( &texWhite ); 
 	
 	auto sph0 = MakeSphere( vec3( 0.0f ), 1.0f );
 	sph0.m_shapeType = EShape.Sphere;
@@ -183,15 +178,13 @@ void main( string[] args)
 	import light;
 	
     auto sph_lightGeo = MakeSphere( vec3( 0.0f, 10.0f, 0.0f ), 5.0f );
-	auto sph_light = cast(LightCommon*) emplace( geoAlloc.Alloc!DiffuseAreaLight(), Spectrum( 100.0f ), sph_lightGeo, 10 /* num samples */ );
-	auto prim_light = cast(PrimCommon*) emplace( geoAlloc.Alloc!EmissiveSurfacePrim(), sph_lightGeo, nullMtl, sph_light );
-	
-	// auto 
+	auto sph_light = cast(LightCommon*) geoAlloc.AllocInstance!DiffuseAreaLight( Spectrum(100.0f), sph_lightGeo, 10 /* num samples */ );
+	auto prim_light = cast(PrimCommon*) geoAlloc.AllocInstance!EmissiveSurfacePrim( sph_lightGeo, nullMtl, sph_light );
 	
 	import datastructures;
 	// auto prims = CreateBuffer!(PrimCommon*)( geoAlloc, 256 );
 	auto primBuffer = BufferT!( PrimCommon*, 512 )();
-	// primBuffer.Push( prim0 );
+	primBuffer.Push( prim0 );
 	primBuffer.Push( prim1 );
 	primBuffer.Push( prim_light );
 
