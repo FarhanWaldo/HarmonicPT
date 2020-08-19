@@ -88,14 +88,15 @@ class SamplerIntegrator : IIntegrator
 	Image_F32*      m_renderBuffer;
 	const uint      m_maxBounces;
 	uint            m_finishedProgressions = 0;
-	const uint      m_maxProgressions = 128;
+	const uint      m_maxProgressions;
 
-    this( BaseSampler* sampler, Camera cam, Image_F32* renderBuffer, uint maxBounces = 6 )
+    this( BaseSampler* sampler, Camera cam, Image_F32* renderBuffer, uint maxProgressions = 128, uint maxBounces = 6 )
     {
         m_sampler       = sampler;
         m_camera        = cam;
         m_renderBuffer  = renderBuffer;
-        m_maxBounces    = maxBounces; 
+        m_maxBounces    = maxBounces;
+		m_maxProgressions = maxProgressions;
     }
 
     override void
@@ -121,8 +122,7 @@ class SamplerIntegrator : IIntegrator
 				// {{
                 // // thread id stuff
                 
-                Spectrum pixelColour = Spectrum(0.0); // = vec3( 0.0, 1.0, 0.0 );
-                // // int  nSamples;
+                Spectrum pixelColour = Spectrum(0.0);
 
                 foreach ( progression; 0 .. numProgressions )
                 {
@@ -143,7 +143,7 @@ class SamplerIntegrator : IIntegrator
                 const float ig = pixelColour.g;
                 const float ib = pixelColour.b;
 
-                ulong baseIndex = (( j*imageWidth ) + i ) * 3;
+                const ulong baseIndex            = (( j*imageWidth ) + i ) * 3;
                 renderBuffer[ baseIndex ]       += ir;
                 renderBuffer[ baseIndex + 1 ]   += ig;
                 renderBuffer[ baseIndex + 2 ]   += ib;
@@ -213,19 +213,18 @@ class DirectLightingIntegrator : SamplerIntegrator
 {
     LightingStrategy m_lightingStrategy;
 
-    this( BaseSampler* sampler, Camera cam, Image_F32* renderBuffer, LightingStrategy lightingStrategy=LightingStrategy.UniformSampleOne )
+    this( BaseSampler* sampler, Camera cam, Image_F32* renderBuffer, uint maxProgressions = 64, LightingStrategy lightingStrategy=LightingStrategy.UniformSampleOne )
 	{
-		super( sampler, cam, renderBuffer, 1 /* max bounces */ );
+		super( sampler, cam, renderBuffer, maxProgressions, /* max bounces */ );
 		m_lightingStrategy = lightingStrategy;
 	}
 	
 	override Spectrum
 	Irradiance( in Ray ray, Scene* scene, BaseSampler* sampler, IMemAlloc* memArena, int depth = 0 )
 	{
-		Spectrum radiance = Spectrum(0.0f); // = Spectrum( 1.0f, 0.0f, 0.0f );
+		Spectrum radiance = Spectrum(0.0f);
 
         SurfaceInteraction surfIntx;
-		surfIntx.m_material = null;
 		if ( scene.FindClosestIntersection( &ray, surfIntx ) )
 		{
 		    if ( surfIntx.m_material != null )
