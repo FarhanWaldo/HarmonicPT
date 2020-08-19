@@ -329,8 +329,6 @@ Spectrum EstimateDirect(
 	VisibilityTester visTester;
 	Spectrum irradianceFromLight =
 	    Light_SampleIrradiance( light, refIntx, uLight, wi, lightPdf, visTester );
-
-    irradianceFromLight = Spectrum(10.0f);
 	
 	if ( lightPdf > 0.0f && !irradianceFromLight.IsBlack() )
 	{
