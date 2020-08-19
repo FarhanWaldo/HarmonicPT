@@ -31,7 +31,7 @@ void main( string[] args)
     float* pImageBufferData;
 	ubyte* pDisplayBufferData;
 
-	float whitepoint = 2.0f;
+	float whitepoint = 5.0f;
 	
     // Create global memory allocator
     //
@@ -122,6 +122,7 @@ void main( string[] args)
     bool        renderHasConverged = false;
 
     void tonemap() {
+		float invNumProgressions = 1.0f/(cast(float) numProgressions);
         //	Create LDR display buffer from HDR render buffer
         //
         foreach ( uint row; 0..imageHeight )
@@ -132,9 +133,9 @@ void main( string[] args)
 
                 // F_TODO:: sqrt approximates linear -> gamme space conversion
                 //
-                pDisplayBufferData[ pixelIndex ] 		= cast(ubyte) Min( 255, ( sqrt( ( pImageBufferData[ pixelIndex ] / whitepoint ) ) * 255.0f ) );
-                pDisplayBufferData[ pixelIndex  + 1 ] 	= cast(ubyte) Min( 255, ( sqrt( ( pImageBufferData[ pixelIndex + 1 ] / whitepoint ) ) * 255.0f ) );
-                pDisplayBufferData[ pixelIndex  + 2 ] 	= cast(ubyte) Min( 255, ( sqrt( ( pImageBufferData[ pixelIndex + 2 ] / whitepoint ) ) * 255.0f ) );
+                pDisplayBufferData[ pixelIndex ] 		= cast(ubyte) Min( 255, ( sqrt( ( invNumProgressions*pImageBufferData[ pixelIndex ] / whitepoint ) ) * 255.0f ) );
+                pDisplayBufferData[ pixelIndex  + 1 ] 	= cast(ubyte) Min( 255, ( sqrt( ( invNumProgressions*pImageBufferData[ pixelIndex + 1 ] / whitepoint ) ) * 255.0f ) );
+                pDisplayBufferData[ pixelIndex  + 2 ] 	= cast(ubyte) Min( 255, ( sqrt( ( invNumProgressions*pImageBufferData[ pixelIndex + 2 ] / whitepoint ) ) * 255.0f ) );
             }
         }
     }
@@ -165,19 +166,17 @@ void main( string[] args)
 	IMaterial lambertRed = *geoAlloc.AllocInstance!MatteMaterial( &texRed );
 	IMaterial lambertWhite = *geoAlloc.AllocInstance!MatteMaterial( &texWhite ); 
 	
-	auto sph0 = MakeSphere( vec3( 0.0f ), 1.0f );
+	auto sph0 = MakeSphere( vec3( 0.0f, 0.0f, 0.0f ), 1.0f );
 	sph0.m_shapeType = EShape.Sphere;
 	// auto prim0 = MakeSurfacePrim( sph0, lambertRed );
 	auto prim0 = MakeSurfacePrim( sph0, &lambertRed );
 	
-	auto sph1 = MakeSphere( vec3( 0.0f, -501.0f, 0.0f ), 500.0f ); /// F_TODO:: Missing intersections at top of sphere once r >= 500
-	sph1.m_shapeType = EShape.Sphere;
-	// auto prim1 = MakeSurfacePrim( sph1, lambertWhite );
+	auto sph1 = MakeSphere( vec3( 0.0f, -201.0f, 0.0f ), 200.0f ); /// F_TODO:: Missing intersections at top of sphere once r >= 500
 	auto prim1 = MakeSurfacePrim( sph1, &lambertWhite );
 
 	import light;
 	
-    auto sph_lightGeo = MakeSphere( vec3( 0.0f, 10.0f, 0.0f ), 5.0f );
+    auto sph_lightGeo = MakeSphere( vec3( 0.0f, 10.0f, 0.0f ), 3.0f );
 	auto sph_light = cast(LightCommon*) geoAlloc.AllocInstance!DiffuseAreaLight( Spectrum(100.0f), sph_lightGeo, 10 /* num samples */ );
 	auto prim_light = cast(PrimCommon*) geoAlloc.AllocInstance!EmissiveSurfacePrim( sph_lightGeo, nullMtl, sph_light );
 	
@@ -223,16 +222,16 @@ void main( string[] args)
 
             if ( !renderHasConverged )
             {
-                writeln("Performing Render Progression # ", numProgressions, "" );
+                // writeln("Performing Render Progression # ", numProgressions, "" );
+				write("Performing render progression ", numProgressions, "\r");
 
                 renderHasConverged =
                     integrator.RenderProgression( &scene, &integratorArena );
 
+                ++numProgressions;
+				
                 tonemap();
                 updateSdlDisplayBuffer();
-
-                ++numProgressions;
-
             }
 
 
@@ -247,6 +246,7 @@ void main( string[] args)
         }
 	}
 
+	writeln("\nRender is finished!\n");
 
     ImageBuffer_WriteToPng( &renderImage, cast(char*) "render.png" );
 }

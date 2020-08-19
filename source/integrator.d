@@ -87,6 +87,8 @@ class SamplerIntegrator : IIntegrator
 	Camera          m_camera;
 	Image_F32*      m_renderBuffer;
 	const uint      m_maxBounces;
+	uint            m_finishedProgressions = 0;
+	const uint      m_maxProgressions = 128;
 
     this( BaseSampler* sampler, Camera cam, Image_F32* renderBuffer, uint maxBounces = 6 )
     {
@@ -135,7 +137,7 @@ class SamplerIntegrator : IIntegrator
 					memArena.Reset();
                 }
 
-                pixelColour *= (1.0/( cast(float) numProgressions ) );
+                // pixelColour *= (1.0/( cast(float) numProgressions ) );
 
                 const float ir = pixelColour.r;
                 const float ig = pixelColour.g;
@@ -148,7 +150,10 @@ class SamplerIntegrator : IIntegrator
             }
         }
 
-        return true;
+		m_finishedProgressions += numProgressions;
+		
+		const bool renderFinished = m_finishedProgressions >= m_maxProgressions;
+		return renderFinished;
     }
 
     Spectrum
