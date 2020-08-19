@@ -191,7 +191,7 @@ Prim_IntersectsRay( const(PrimCommon)* prim, const(Ray)* ray, ref ScenePrimInter
 
 
 pragma(inline, true) pure @nogc @trusted nothrow
-LightCommon* Prim_GetLight( PrimCommon* prim, Ray* ray, ref ScenePrimIntersection primIntx )
+LightCommon* Prim_GetLight( CPrimCommon* prim )
 {
 	switch ( prim.GetPrimType() )
 	{
@@ -225,6 +225,12 @@ bool FindClosestIntersection( const(Scene)* scene, const(Ray)* ray, ref SurfaceI
 	    PrimType primType = primIntx.m_prim.GetPrimType();
 
 		// TODO:: Get shading info for shape
+		// Shape_GetShadingInfo(
+		CShapeCommon* shape = Prim_GetShape( primIntx.m_prim );
+		if ( shape )
+		{
+			shape.Shape_GetShadingInfo( surfIntx, primIntx );
+		}
 
    		surfIntx.m_prim     = primIntx.m_prim;
 		surfIntx.m_material = primIntx.m_material;

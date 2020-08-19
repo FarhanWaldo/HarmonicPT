@@ -4,20 +4,29 @@ import fwmath;
 import spectrum;
 import sampling;
 
-enum BxDFType
+
+enum BxDFTypeFlag
 {
+    None             = 0,
     Reflection       = 1 << 0,
 	Transmission     = 1 << 1,
 	Diffuse          = 1 << 2,
 	Glossy           = 1 << 3,
 	Specular         = 1 << 4,
-
-	All              = Reflection |
-	                   Transmission |
-					   Diffuse |
-					   Glossy |
-					   Specular
 }
+import std.typecons;
+alias BitFlags!(BxDFTypeFlag, Yes.unsafe) BxDFType;
+
+enum BxDFType BxDFType_None         = BxDFTypeFlag.None;
+enum BxDFType BxDFType_Reflection   = BxDFTypeFlag.Reflection;
+enum BxDFType BxDFType_Transmission = BxDFTypeFlag.Transmission;
+enum BxDFType BxDFType_Diffuse      = BxDFTypeFlag.Diffuse;
+enum BxDFType BxDFType_Glossy       = BxDFTypeFlag.Glossy;
+enum BxDFType BxDFType_Specular     = BxDFTypeFlag.Specular;
+enum BxDFType BxDFType_All =
+	BxDFType_Reflection | BxDFType_Transmission | BxDFType_Diffuse | BxDFType_Glossy | BxDFType_Specular;
+enum BxDFType BxDFType_AllNonSpecular = BxDFType_All & ~BxDFType_Specular;
+
 
 /**
 //
@@ -42,47 +51,53 @@ enum BxDFType
 //
 */
 
-pure float CosTheta( in vec3 w )        { return w.z; }
-pure float Cos2Theta( in vec3 w )       { return w.z * w.z; }
-pure float AbsCosTheta( in vec3 w )     { return Abs( w.z ); }
+pure @safe @nogc nothrow float CosTheta( in vec3 w )        { return w.z; }
+pure @safe @nogc nothrow float Cos2Theta( in vec3 w )       { return w.z * w.z; }
+pure @safe @nogc nothrow float AbsCosTheta( in vec3 w )     { return Abs( w.z ); }
 
-pure float Sin2Theta( in vec3 w )       { return Max( 0.0, 1.0 - Cos2Theta( w ) ); }
-pure float SinTheta( in vec3 w )        { return sqrt( Sin2Theta( w ) ); }
-pure float TanTheta( in vec3 w )        { return SinTheta( w ) / CosTheta( w ); }
-pure float Tan2Theta( in vec3 w )       { return Sin2Theta( w ) / Cos2Theta( w ); }
+pure @safe @nogc nothrow float Sin2Theta( in vec3 w )       { return Max( 0.0, 1.0 - Cos2Theta( w ) ); }
+pure @safe @nogc nothrow float SinTheta( in vec3 w )        { return sqrt( Sin2Theta( w ) ); }
+pure @safe @nogc nothrow float TanTheta( in vec3 w )        { return SinTheta( w ) / CosTheta( w ); }
+pure @safe @nogc nothrow float Tan2Theta( in vec3 w )       { return Sin2Theta( w ) / Cos2Theta( w ); }
 
-pure float CosPhi( in vec3 w ) {
+pure @safe @nogc nothrow
+float CosPhi( in vec3 w ) {
     float sinTheta = SinTheta( w );
 	return ( sinTheta == 0.0f ) ? 1.0f : Clamp( w.x / sinTheta, -1.0f, 1.0f );
 }
 
-pure float SinPhi( in vec3 w ) {
+pure @safe @nogc nothrow
+float SinPhi( in vec3 w ) {
     float sinTheta = SinTheta( w );
 	return ( sinTheta == 0.0f ) ? 0.0f : Clamp( w.y / sinTheta, -1.0f, 1.0f );
 }
 
-pure float Cos2Phi( in vec3 w ) {
+pure @safe @nogc nothrow
+float Cos2Phi( in vec3 w ) {
     float cosPhi = CosPhi( w );
 	return cosPhi * cosPhi;
 }
 
-pure float Sin2Phi( in vec3 w ) {
+pure @safe @nogc nothrow
+float Sin2Phi( in vec3 w ) {
     float sinPhi = SinPhi( w );
 	return sinPhi*sinPhi;
 }
 
 
-pure float CosDPhi( in vec3 wa, in vec3 wb ) {
+pure @safe @nogc nothrow
+float CosDPhi( in vec3 wa, in vec3 wb ) {
     return Clamp( (wa.x*wb.x + wa.y*wb.y) / sqrt( wa.x*wa.x + wa.y*wa.y ) * ( wb.x*wb.x + wb.y*wb.y ),
 	               -1.0f, 1.0f );
 }
 
-pure vec3 Reflect( in vec3 wo, in vec3 n ) {
+pure @safe @nogc nothrow
+vec3 Reflect( in vec3 wo, in vec3 n ) {
     return -1.0f*wo + 2.0f*v_dot( wo, n )*n;
 }
 
-pure bool
-Refract( in vec3 wi, in vec3 n, float eta, ref vec3 o_wt )
+pure @safe @nogc nothrow
+bool Refract( in vec3 wi, in vec3 n, float eta, ref vec3 o_wt )
 {
     float cosThetaI = v_dot( n, wi );
 	float sin2ThetaI = Max( 0.0f, 1.0f - cosThetaI * cosThetaI );
@@ -101,11 +116,13 @@ Refract( in vec3 wi, in vec3 n, float eta, ref vec3 o_wt )
 }
 
 
-pure bool SameHemisphere( in vec3 a, in vec3 b ) {
+pure @safe @nogc nothrow
+bool SameHemisphere( in vec3 a, in vec3 b ) {
     return ( a.z * b.z ) > 0.0f;
 }
 
-pure vec3 FaceForward( in vec3 v, in vec3 n ) {
+pure @safe @nogc nothrow
+vec3 FaceForward( in vec3 v, in vec3 n ) {
     return ( v_dot( v, n ) >= 0.0f ) ? n : -1.0f*n;
 }
 
@@ -117,16 +134,26 @@ abstract class BaseBxDF
 {
     const BxDFType    m_type;
 
-	this( BxDFType type )
+    pure @safe @nogc nothrow
+	this( BxDFType typeFlags )
 	{
-	    m_type = type;
+	    m_type = typeFlags;
 	}
 
-	pure const bool
-	MatchesType( BxDFType type ) {
-	    return ( m_type & type ) == m_type;
+    pure const @safe @nogc nothrow final
+	BxDFType GetType() { return m_type; }
+	
+	pure const @safe @nogc nothrow final
+	bool MatchesType( BxDFType typeFlags ) {
+	    return ( m_type & typeFlags ) == m_type;
 	}
 
+    pure const @safe @nogc nothrow final
+	bool IsSpecular()
+	{
+		return ( m_type & BxDFType_Specular ) == BxDFType_Specular;
+	}
+	    
 	//  BxDF Args:
 	//
 	//  wo = outgoing lighting direction on surface
@@ -141,102 +168,111 @@ abstract class BaseBxDF
         Returns:
             The ratio of reflected irradiance heading towards wo
     */
-	pure const vec3 F( in vec3 wo, in vec3 wi );
+	pure const @safe @nogc nothrow
+	Spectrum F( in vec3 wo, in vec3 wi );
 
     // F_TODO:: Document the parameters of these methods.
 	
     /**
         Generates a sampling direction (o_wi) and PDF (o_pdf) give na random sample u (2D uniform random number)
+
+        The default implementation will do simple cosine lobe sampling.
+
+        NOTE:: The default implementation of Sample_F and Pdf is for cosine hemisphere sampling
+               If a new sampling technique needs to be written, Pdf must also be changed accordingly
     */
-	pure const vec3
-	Sample_F(
+	pure const @safe @nogc nothrow
+    Spectrum Sample_F(
 	    in vec3     wo,    
 		in vec2     u,
 		ref vec3    o_wi,
 	    float*      o_pdf,
-		BxDFType*   o_sampledType = null );
+		BxDFType*   o_sampledType = null )
+	{
+        o_wi = CosineSampleHemisphere( u );
+		if ( wo.z < 0.0f ) {
+		    o_wi.z *= -1.0f;
+		}
+		*o_pdf = Pdf( wo, o_wi );
+		return F( wo, o_wi );
+	}
 
 	/**
         Returns the PDF value for a pair of incoming and outgoing directions
+
+        NOTE:: Does cosine hemisphere sampling by default. If a different PDF function is desired,
+               then Sample_F must also be updated
     */
-	pure const float Pdf( in vec3 wo, in vec3 wi );
+	pure const @safe @nogc nothrow
+	float Pdf( in vec3 wo, in vec3 wi )
+	{
+	    return SameHemisphere( wo, wi ) ? AbsCosTheta( wi )*INV_PI : 0.0f;
+	}
 
 
+	/// F_TODO:: Add default routines for calculating hemispherical reflectances below
+	///`
 	/**
         Compute the Hemispherical-Directional reflectance on the surface in the direction wo
         The integral of the BDRF toward wo over the hemisphere of incoming directions
     */
-	pure const vec3 Rho( in vec3 wo, in vec2[] samples );
+	pure const @safe @nogc nothrow
+    Spectrum Rho( in vec3 wo, in vec2[] samples );
 
 	/**
         Compute the average Hemispherical-Hemispherical reflection on the surface.
         The same as the Hemispheriecal-Directional reflectance, but averaged over the hemisphere
           of outgoing directions.
     */
-	pure const vec3 Rho( in vec2[] samples1, in vec2[] samples2 );
+	pure const @safe @nogc nothrow
+    Spectrum Rho( in vec2[] samples1, in vec2[] samples2 );
 }
 
 
-
-struct BSDF
+class LambertBrdf : BaseBxDF
 {
-    vec3  m_geoNormal;
+    Spectrum m_R;
 
-	//  Can be used to transform in/out of the shading coordinate system
-	//  { m_shadingNormal, m_shadingS, m_shadingT } form an orthonormal basis on the surface of the shading point
-	//
-	vec3  m_shadingNormal;
-	vec3  m_shadingS;
-	vec3  m_shadingT;
-
-	BaseBxDF*[8]  m_bxdfs;
-    uint          m_numBxdfs = 0;
+    this( Spectrum reflectance )
+	{
+	    super( BxDFType_Diffuse | BxDFType_Reflection );
+		m_R = reflectance;
+	}
 	
-	float         m_eta; // Relative index of refraction
-
-	this( in vec3 geoNormal, in vec3 shadingNormal, in vec3 dpdu, float eta = 1.0f )
+	/**
+        Evaluate the BxDF for a given outgoing and incident lighting direction
+        Params:
+            wo = outgoing direction
+            wi = incident lighting direction
+        Returns:
+            The ratio of reflected irradiance heading towards wo
+    */
+	override pure const @safe @nogc nothrow
+	Spectrum F( in vec3 wo, in vec3 wi )
 	{
-	    m_geoNormal     = geoNormal;
-		m_shadingNormal = shadingNormal;
-		m_shadingS      = v_normalise( dpdu );
-		m_shadingT      = v_normalise( v_cross( shadingNormal, dpdu ) );
-		m_eta           = eta;
+	    return m_R*INV_PI;
 	}
 
-	void AddBxDF( BaseBxDF* bxdf ) {
-	    assert ( m_numBxdfs <= m_bxdfs.length, "Trying to insert to many BxDFs into BSDF object" );
 
-		m_bxdfs[ m_numBxdfs ] = bxdf;
-		++m_numBxdfs;
+	/**
+        Compute the Hemispherical-Directional reflectance on the surface in the direction wo
+        The integral of the BDRF toward wo over the hemisphere of incoming directions
+    */
+	override pure const @safe @nogc nothrow
+    Spectrum Rho( in vec3 wo, in vec2[] samples )
+	{
+	    return m_R;
 	}
 
-	pure const uint
-	NumComponents( BxDFType flags = BxDFType.All )
+	/**
+        Compute the average Hemispherical-Hemispherical reflection on the surface.
+        The same as the Hemispheriecal-Directional reflectance, but averaged over the hemisphere
+          of outgoing directions.
+    */
+	override pure const @safe @nogc nothrow
+    Spectrum Rho( in vec2[] samples1, in vec2[] samples2 )
 	{
-	    uint numMatching = 0;
-	    foreach (i; 0..m_numBxdfs ) {
-		    if ( m_bxdfs[i].MatchesType( flags ) )
-			    ++numMatching;
-		}
-		return numMatching;
-	}
-
-	pure const vec3
-	WorldToLocal( in vec3 w )
-	{
-	    return vec3(
-		    v_dot( w, m_shadingS ),
-			v_dot( w, m_shadingT ),
-			v_dot( w, m_shadingNormal ) );
-	}
-
-	pure const vec3
-	LocalToWorld( in vec3 w )
-	{
-	    return vec3(
-		    m_shadingS.x*w.x + m_shadingT.x*w.y + m_shadingNormal.x*w.z,
-		    m_shadingS.y*w.x + m_shadingT.y*w.y + m_shadingNormal.y*w.z,
-		    m_shadingS.z*w.x + m_shadingT.z*w.y + m_shadingNormal.z*w.z,
-		);
+        return m_R;
 	}
 }
+

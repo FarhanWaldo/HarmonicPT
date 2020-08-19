@@ -66,10 +66,26 @@ class StackAlloc : BaseMemAlloc
 }
 
 
-pragma(inline,true)
-T* Alloc(T, T_Alloc)( ref T_Alloc alloc )
+pragma(inline, true)
+T* AllocInstance( T, TAlloc, Args... )( ref TAlloc memAlloc, auto ref Args args )
 {
-	return cast(T*) alloc.Allocate( T.sizeof );
+	import std.conv : emplace;
+
+	static if (is(T == struct))
+	{
+	    return cast(T*) emplace( cast(T*) memAlloc.Allocate( T.sizeof ), args );
+	}
+	else if (is(T == class))
+	{
+	    import std.traits : classInstanceAlignment;
+	    immutable ulong classSizeBytes = __traits( classInstanceSize, T );
+		immutable ulong alignment      = classInstanceAlignment!T;
+	    return cast(T*) [emplace!T( memAlloc.Allocate(classSizeBytes, alignment), args)].ptr;
+	}
+	else
+	{
+	    static assert("AllocInstance() called with type that's not a class or struct.");
+	}
 }
 
 pragma(inline,true)

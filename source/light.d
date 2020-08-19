@@ -64,6 +64,9 @@ struct LightCommon
 	pure const @nogc @safe nothrow
 	uint           GetNumSamples() { return m_numSamples; }
 
+	pure const @nogc @safe nothrow
+	bool           IsDeltaLight()  { return false; }
+
 	// F_TODO:: Add medium interface
 }
 alias const(LightCommon) CLightCommon;
@@ -86,6 +89,35 @@ struct DiffuseAreaLight
 	}
 }
 alias const(DiffuseAreaLight) CDiffuseAreaLight;
+
+
+pure @nogc @trusted nothrow
+Spectrum CalculateEmission( CLightCommon* light, in Interaction intx, in vec3 wo )
+{
+    switch ( light.GetType() )
+	{
+        case LightType.DiffuseAreaLight:
+		    auto areaLight = cast(CDiffuseAreaLight*) light;
+			return CalculateEmission( areaLight, intx, wo );
+	
+	    default:
+		return Spectrum(0.0f);
+	}
+}
+
+pure @nogc @safe nothrow
+Spectrum CalculateEmission( CDiffuseAreaLight* light,  in Interaction intx, in vec3 wo )
+{
+	return ( v_dot( intx.m_normal, wo ) > 0.0f ) ? light.m_emission : Spectrum( 0.0f );
+	// const float dot = v_dot( intx.m_normal, wo );
+	// const bool  facingLight = dot > 0.0f;
+	// if ( facingLight )
+	// {
+	//     return light.m_emission;
+	// }
+
+	// return Spectrum( 0.0f );
+}
 
 
 pure @nogc @trusted nothrow
@@ -126,14 +158,7 @@ DiffuseAreaLight_SampleIrradiance(
 	o_pdf                 = Shape_Pdf( areaLight.m_shape, refPoint, o_irradianceDirection );
 
 	visTester             = VisibilityTester(*refPoint, cast(CInteraction) shapeIntx );
-
-    pure @nogc @safe nothrow
-	Spectrum CalculateEmission( CDiffuseAreaLight* light,  in Interaction intx, in vec3 wo )
-	{
-	    return ( v_dot( intx.m_normal, wo ) > 0.0f ) ? light.m_emission : Spectrum( 0.0f );
-	}
 	
-    // return radiance;
 	return CalculateEmission( areaLight, shapeIntx, -1.0f*o_irradianceDirection );
 }
 

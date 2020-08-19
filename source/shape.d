@@ -2,6 +2,7 @@ import std.math : sqrt;
 import fwmath;
 import interactions;
 import sampling;
+import scene : ScenePrimIntersection;
 
 enum EShape 
 {
@@ -15,14 +16,14 @@ alias const(ShapeSphere)     CShapeSphere;
 
 struct ShapeCommon
 {
-    EShape m_shapeType;
+    EShape m_shapeType = EShape.Sphere;
 
 	enum IsShape = true;
 }
 
 struct ShapeSphere
 {
-    ShapeCommon m_common;
+    ShapeCommon m_common = { EShape.Sphere };
 	alias m_common this;
 
     Sphere m_geo;
@@ -188,8 +189,6 @@ pure @nogc @safe nothrow
 Interaction
 Sphere_Sample( CShapeSphere* sphere, CInteraction* refPoint, in vec2 randomSample )
 {
-    /// F_TODO:: Implement this sampling function, then DiffuseAreaLight_SampleIrradiance
-	///
     const vec3  centre = sphere.m_geo.m_centre;
     const float r      = sphere.m_geo.m_radius;
 	const float r2     = r*r; // radius rsquared
@@ -270,4 +269,79 @@ Sphere_Sample( CShapeSphere* sphere, CInteraction* refPoint, in vec2 randomSampl
 	intx.m_posError = pError;
 	
 	return intx;
+}
+
+
+pure @trusted @nogc nothrow
+void Shape_GetShadingInfo( CShapeCommon* shape, ref SurfaceInteraction surfIntx, in ScenePrimIntersection primInt )
+{
+   switch ( shape.m_shapeType )
+	{
+	    case EShape.Sphere:
+			auto sphere = cast( CShapeSphere* ) shape;
+			return Sphere_GetShadingInfo( sphere, surfIntx, primInt.m_intRes );
+
+		default:
+			assert("Unimplemented shape type");
+	}
+}
+
+
+pure @safe @nogc nothrow
+void Sphere_GetShadingInfo( CShapeSphere* sphere, ref SurfaceInteraction surfIntx, in IntersectionResult intRes )
+{
+	
+	const vec3 p = intRes.m_contactNormal; // intersection point on a unit sphere in origin
+
+	import std.math : atan2, asin, fmod;
+	// defines the angle on the X-Z plane, going counter clockwise from +X axis; domain: [ 0, 2*pi )
+    float phi = atan2( p.z, p.x );
+    // defines the angle on the X-Y plane, going counter clockwise from the +X axis; domain: [ -pi/2, pi/2 ]
+    const float theta = asin( p.y );
+
+    if ( phi < 0.0f ) phi += TAU;
+
+    const vec2 uv = vec2( phi / TAU, ( theta + PI/2.0f ) / PI );
+
+	const float sinTheta = p.y;
+	const float cosTheta = SafeSqrt( 1.0f - sinTheta*sinTheta );
+	const float cosPhi   = p.x/cosTheta;
+	const float sinPhi   = p.z/cosTheta;
+
+	/// first-order derivatives (of surface parameterisation)
+	///
+	const vec3 dpdu = vec3( -sinTheta*cosPhi, cosTheta, -sinTheta*sinPhi );
+	const vec3 dpdv = vec3( -cosTheta*sinPhi, 0.0f, cosTheta*cosPhi );
+
+	/// second-order derivatives
+	///
+	const vec3 d2pdu2 = vec3( -cosTheta*cosPhi, -sinTheta, -cosTheta*sinPhi );
+	const vec3 d2pduv = vec3( sinTheta*sinPhi, 0.0f, -sinTheta*cosPhi );
+	const vec3 d2pdv2 = vec3( -cosTheta*cosPhi, 0.0f, -cosTheta*sinPhi );
+
+	///  First fundamental forms
+	///
+	const float E = v_dot( dpdu, dpdu );
+	const float F = v_dot( dpdu, dpdv );
+	const float G = v_dot( dpdv, dpdv );
+
+	const vec3 normal = v_normalise( v_cross( dpdu, dpdv ) );
+
+	///  Second fundamental forms
+	///
+	const float e = v_dot( normal, d2pdu2 );
+	const float f = v_dot( normal, d2pduv );
+	const float g = v_dot( normal, d2pdv2 );
+
+	const float invDet = 1.0f/( E*G - F*F ); // inverse determinant for second fundamental form
+	const vec3 dndu = (f*F - e*G)*invDet*dpdu + (e*F - f*E)*invDet*dpdv;
+	const vec3 dndv = (g*F - f*G)*invDet*dpdu + (f*F - g*E)*invDet*dpdv;
+
+	surfIntx = SurfaceInteraction( intRes.m_contactPos, uv, normal,
+								   dpdu, dpdv,
+								   dndu, dndv,
+								   0.0f /* time */ );
+
+	surfIntx.m_posError = 0.0001* intRes.m_contactPos.abs(); // TODO::[precision][geometry]
+	 
 }

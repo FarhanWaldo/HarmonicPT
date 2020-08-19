@@ -2,6 +2,9 @@ import fwmath;
 import bsdf;
 import scene;
 import material;
+import spectrum;
+import memory;
+import light;
 
 alias const(Interaction)         CInteraction;
 alias const(SurfaceInteraction)  CSurfaceInteraction;
@@ -13,9 +16,10 @@ struct Interaction
     vec3    m_posError;
     vec3    m_wo;           /// Outgoing ray direction
     float   m_time;
-
+    bool    m_isSurfaceInteraction = false;
+	
 	pure @nogc @safe nothrow
-    this( in ref vec3 pos, in ref vec3 normal, float time )
+    this( in  vec3 pos, in  vec3 normal, float time )
     {
         m_pos       = pos;
         m_normal    = normal;
@@ -27,7 +31,7 @@ struct Interaction
     {
         Ray newRay = void;
 
-        newRay.m_origin = m_pos * 10.0f*EPSILON*m_normal; // TODO:: Do better than arbitrary multiplying by 10*EPSILON
+        newRay.m_origin = m_pos + 10.0f*EPSILON*m_normal; // TODO:: Do better than arbitrary multiplying by 10*EPSILON
         newRay.m_dir    = v_normalise( dir );
         newRay.m_maxT   = float.max;
 
@@ -38,7 +42,7 @@ struct Interaction
     pure const @nogc @safe nothrow
 	Ray CreateRayTo( in ref vec3 endPoint )
     {
-        vec3 offsetPos = m_pos + EPSILON*m_normal;
+        vec3 offsetPos = m_pos + 10.0f* EPSILON*m_normal;
         Ray newRay = CreateFiniteRaySegment( offsetPos, endPoint );
         newRay.m_maxT = newRay.m_maxT - 0.0001f; // TODO:: Find a way to deal with this robustly
 
@@ -68,11 +72,14 @@ struct SurfaceInteraction
     CPrimCommon*      m_prim;
     Bsdf*             m_bsdf;
 
-    this( in ref vec3 pos, in ref vec2 uv, in ref vec3 n,
-          in ref vec3 dpdu, in ref vec3 dpdv,
-          in ref vec3 dndu, in ref vec3 dndv,
+	pure @nogc @safe nothrow
+    this( in  vec3 pos, in  vec2 uv, in  vec3 n,
+          in  vec3 dpdu, in  vec3 dpdv,
+          in  vec3 dndu, in  vec3 dndv,
           float time )
     {
+	    m_isSurfaceInteraction = true;
+		
         m_pos       = pos;
         m_normal    = n;
         m_time      = time;		
@@ -87,11 +94,32 @@ struct SurfaceInteraction
     }
 }
 
-pure vec3
-GetAreaLightEmission( SurfaceInteraction surfIntx, in ref vec3 wo )
+@safe
+void ComputeScatteringFunctions(
+	SurfaceInteraction* si,
+	IMemAlloc*          memArena,
+	bool                transportFromEyes,
+	bool                allowMultipleLobes )
 {
-    // TODO:: Implement IAreaLight::L ()
-    return vec3();
+    if ( (si.m_prim != null) && (si.m_material != null) )
+	{
+	    si.m_material.ComputeScatteringFunctions( si, memArena, transportFromEyes, allowMultipleLobes );
+	}
+}
+								
+
+pure @safe @nogc nothrow
+Spectrum GetAreaLightEmission( in SurfaceInteraction surfIntx, in ref vec3 wo )
+{
+    LightCommon* light = Prim_GetLight( surfIntx.m_prim );
+    
+    // return ( light != null ) ? CalculateEmission( light, surfIntx, wo ) : Spectrum(0.0f);
+	if ( light != null )
+	{
+	    return CalculateEmission( light, surfIntx, wo );
+	}
+
+	return Spectrum( 0.0f );
 }
 
 

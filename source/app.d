@@ -1,9 +1,9 @@
-
 import core.memory;
 import std.stdio;
 import std.algorithm;
 import std.math;
 import std.range;
+import std.conv : emplace;
 
 import derelict.sdl2.sdl;
 
@@ -16,7 +16,8 @@ import integrator;
 import shape;
 import sampling;
 import material;
-
+import spectrum;
+import texture;
 
 void main( string[] args)
 {
@@ -30,7 +31,7 @@ void main( string[] args)
     float* pImageBufferData;
 	ubyte* pDisplayBufferData;
 
-	float whitepoint = 2.0f;
+	float whitepoint = 5.0f;
 	
     // Create global memory allocator
     //
@@ -121,6 +122,7 @@ void main( string[] args)
     bool        renderHasConverged = false;
 
     void tonemap() {
+		float invNumProgressions = 1.0f/(cast(float) numProgressions);
         //	Create LDR display buffer from HDR render buffer
         //
         foreach ( uint row; 0..imageHeight )
@@ -131,9 +133,9 @@ void main( string[] args)
 
                 // F_TODO:: sqrt approximates linear -> gamme space conversion
                 //
-                pDisplayBufferData[ pixelIndex ] 		= cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex ] / whitepoint ) ) * 255.0f );
-                pDisplayBufferData[ pixelIndex  + 1 ] 	= cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex + 1 ] / whitepoint ) ) * 255.0f );
-                pDisplayBufferData[ pixelIndex  + 2 ] 	= cast(ubyte) ( sqrt( ( pImageBufferData[ pixelIndex + 2 ] / whitepoint ) ) * 255.0f );
+                pDisplayBufferData[ pixelIndex ] 		= cast(ubyte) Min( 255, ( sqrt( ( invNumProgressions*pImageBufferData[ pixelIndex ] / whitepoint ) ) * 255.0f ) );
+                pDisplayBufferData[ pixelIndex  + 1 ] 	= cast(ubyte) Min( 255, ( sqrt( ( invNumProgressions*pImageBufferData[ pixelIndex + 1 ] / whitepoint ) ) * 255.0f ) );
+                pDisplayBufferData[ pixelIndex  + 2 ] 	= cast(ubyte) Min( 255, ( sqrt( ( invNumProgressions*pImageBufferData[ pixelIndex + 2 ] / whitepoint ) ) * 255.0f ) );
             }
         }
     }
@@ -151,29 +153,42 @@ void main( string[] args)
 
 	ShapeCommon* MakeSphere( vec3 centre, float radius )
 	{
-	    import std.conv : emplace;
-		return cast(ShapeCommon*) emplace( geoAlloc.Alloc!ShapeSphere(), centre, radius );
+		return cast(ShapeCommon*) AllocInstance!ShapeSphere( geoAlloc, centre, radius );
 	}
 	PrimCommon* MakeSurfacePrim( ShapeCommon* shp, IMaterial* mtl )
 	{
-	    import std.conv : emplace;
-		return cast(PrimCommon*) emplace( geoAlloc.Alloc!SurfacePrim(), shp, mtl );
+		return cast(PrimCommon*) geoAlloc.AllocInstance!SurfacePrim( shp, mtl );
 	}  
 
-	auto sph0 = MakeSphere( vec3( 0.0f ), 1.0f );
-	auto prim0 = MakeSurfacePrim( sph0, nullMtl );
-	
-	auto sph1 = MakeSphere( vec3( 0.0f, -1001.0f, 0.0f ), 1000.0f );
-	auto prim1 = MakeSurfacePrim( sph1, nullMtl );
+    ITexture texRed = new FlatColour( Spectrum( 1.0f, 0.0f, 0.0f ) );
+	ITexture texWhite = new FlatColour( Spectrum( 1.0f, 1.0f, 1.0f ) );
 
+	IMaterial lambertRed = *geoAlloc.AllocInstance!MatteMaterial( &texRed );
+	IMaterial lambertWhite = *geoAlloc.AllocInstance!MatteMaterial( &texWhite ); 
+	
+	auto sph0 = MakeSphere( vec3( 0.0f, 0.0f, 0.0f ), 1.0f );
+	sph0.m_shapeType = EShape.Sphere;
+	// auto prim0 = MakeSurfacePrim( sph0, lambertRed );
+	auto prim0 = MakeSurfacePrim( sph0, &lambertRed );
+	
+	auto sph1 = MakeSphere( vec3( 0.0f, -201.0f, 0.0f ), 200.0f ); /// F_TODO:: Missing intersections at top of sphere once r >= 500
+	auto prim1 = MakeSurfacePrim( sph1, &lambertWhite );
+
+	import light;
+	
+    auto sph_lightGeo = MakeSphere( vec3( 0.0f, 10.0f, 0.0f ), 3.0f );
+	auto sph_light = cast(LightCommon*) geoAlloc.AllocInstance!DiffuseAreaLight( Spectrum(10.0f), sph_lightGeo, 10 /* num samples */ );
+	auto prim_light = cast(PrimCommon*) geoAlloc.AllocInstance!EmissiveSurfacePrim( sph_lightGeo, nullMtl, sph_light );
+	
 	import datastructures;
 	// auto prims = CreateBuffer!(PrimCommon*)( geoAlloc, 256 );
 	auto primBuffer = BufferT!( PrimCommon*, 512 )();
 	primBuffer.Push( prim0 );
 	primBuffer.Push( prim1 );
+	primBuffer.Push( prim_light );
 
 	PrimArray primList = PrimArray( primBuffer.range() );
-    Scene scene = Scene( primList, [] );       
+    Scene scene = Scene( primList, [ sph_light ] );       
 	
     Camera renderCam;
     Camera_Init( renderCam,
@@ -185,10 +200,13 @@ void main( string[] args)
                  0.1, 10000.0f );
 
     // IIntegrator integrator = new HelloWorldIntegrator( renderCam, &renderImage );
-    BaseSampler sampler = new PixelSampler( 32, 0, 4123123 /* random seed */ );
+    BaseSampler sampler = new PixelSampler( 32, 0, 43123 /* random seed */ );
     // IIntegrator integrator = new SamplerIntegrator( &sampler, renderCam, &renderImage );
-    IIntegrator integrator = new WhittedIntegrator( &sampler, renderCam, &renderImage );
-    integrator.Init( &scene, &rootMemAlloc );
+    // IIntegrator integrator = new WhittedIntegrator( &sampler, renderCam, &renderImage );
+	immutable ulong renderMemArenaSizeBytes = MegaBytes( 1 );
+	BaseMemAlloc integratorArena = new StackAlloc( cast(void*) rootMemAlloc.Allocate( renderMemArenaSizeBytes ), renderMemArenaSizeBytes );
+	IIntegrator integrator = new DirectLightingIntegrator( &sampler, renderCam, &renderImage );
+    integrator.Init( &scene, &integratorArena );
 
     //
     //  Event/Render loop
@@ -204,16 +222,16 @@ void main( string[] args)
 
             if ( !renderHasConverged )
             {
-                writeln("Performing Render Progression # ", numProgressions, "" );
+                // writeln("Performing Render Progression # ", numProgressions, "" );
+				write("Performing render progression ", numProgressions, "\r");
 
                 renderHasConverged =
-                    integrator.RenderProgression( &scene, &rootMemAlloc );
-
-                tonemap();
-                updateSdlDisplayBuffer();
+                    integrator.RenderProgression( &scene, &integratorArena );
 
                 ++numProgressions;
-
+				
+                tonemap();
+                updateSdlDisplayBuffer();
             }
 
 
@@ -228,6 +246,7 @@ void main( string[] args)
         }
 	}
 
+	writeln("\nRender is finished!\n");
 
     ImageBuffer_WriteToPng( &renderImage, cast(char*) "render.png" );
 }

@@ -154,21 +154,21 @@ unittest
 		float b = 1.0f;
 
 		Swap( a, b );
-		static assert( ( a == 1.0f ) && ( b == 0.0f ) );
+		assert( ( a == 1.0f ) && ( b == 0.0f ) );
 	}
 
     {
 	    double a = 0.0;
 		double b = 1.0;
 
-		Swap( a, b )
-		static assert( ( a == 1.0 ) && ( b == 0.0 ) );
+		Swap( a, b );
+		assert( ( a == 1.0 ) && ( b == 0.0 ) );
 	}
 
 }
 
-pure float
-frand( int* seed )
+pure @trusted @nogc nothrow
+float frand( int* seed )
 {
     union frandT
     {
@@ -186,11 +186,13 @@ struct RNG
 {
     i32 m_seed;
 
+	pure @safe @nogc nothrow
     this( i32 seed )
     {
         this.m_seed = seed;
     }
 
+	@trusted @nogc nothrow
     float rand() {  return frand(&m_seed); }
 }
 
