@@ -27,30 +27,32 @@ enum BxDFType BxDFType_All =
 	BxDFType_Reflection | BxDFType_Transmission | BxDFType_Diffuse | BxDFType_Glossy | BxDFType_Specular;
 enum BxDFType BxDFType_AllNonSpecular = BxDFType_All & ~BxDFType_Specular;
 
+pure @safe @nogc nothrow bool IsSpecular( BxDFType flags ) { return ((flags & BxDFType_Specular) == BxDFType_Specular); }
 
+
+version(none){
 /**
-//
-//  Utility Methods
-//
 
-//  All vectors are in the reflection coordinate system
-//  The Normal vector for the surface is the z-axis [0, 0, 1]
-//  The X and Y axes are the tangent, and bitangent respectively
-//
-//  The parameterisation from Cartesian -> Spherical coordinate system
-//  
-//      x = r * sin( theta ) * cos( phi )
-//      y = r * sin( theta ) * sin( phi )
-//      z = r * cos( theta )
-//
-//      Where:
-//          r       = radius of Sphere (radius = 1, in the reflection coordinate system)
-//          theta   = angle between the Z and X axes [ 0, Pi ]
-//          phi     = angle between the X and Y axes [ 0, 2*Pi )
-//
-//
+  Utility Methods
+
+
+  All vectors are in the reflection coordinate system
+  The Normal vector for the surface is the z-axis [0, 0, 1]
+  The X and Y axes are the tangent, and bitangent respectively
+
+  The parameterisation from Cartesian -> Spherical coordinate system
+ 
+     x = r * sin( theta ) * cos( phi )
+     y = r * sin( theta ) * sin( phi )
+     z = r * cos( theta )
+
+     Where:
+         r       = radius of Sphere (radius = 1, in the reflection coordinate system)
+         theta   = angle between the Z and X axes [ 0, Pi ]
+         phi     = angle between the X and Y axes [ 0, 2*Pi )
+
 */
-
+}
 pure @safe @nogc nothrow float CosTheta( in vec3 w )        { return w.z; }
 pure @safe @nogc nothrow float Cos2Theta( in vec3 w )       { return w.z * w.z; }
 pure @safe @nogc nothrow float AbsCosTheta( in vec3 w )     { return Abs( w.z ); }
