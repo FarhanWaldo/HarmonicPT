@@ -71,6 +71,14 @@ class StackAlloc : BaseMemAlloc
         m_memBufferEnd   = m_memBufferStart + stackSizeInBytes;
     }
 
+	this( void[] memBuffer )
+	{
+		const u64 sizeInBytes = memBuffer.length;
+		super( sizeInBytes );
+		m_memBufferStart = cast(void*) memBuffer;
+		m_memBufferEnd   = m_memBufferStart + sizeInBytes;
+	}
+
     override
 	void Reset()
     {

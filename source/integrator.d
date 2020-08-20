@@ -62,7 +62,7 @@ class SamplerIntegrator : IIntegrator
 		const auto memSize = m_perThreadArenaSizeBytes;
 		foreach( i; 0..m_numThreads )
 		{
-		    m_perThreadArena ~= new StackAlloc( cast(void*) memArena.Allocate( memSize ), memSize );
+			m_perThreadArena ~= new StackAlloc( memArena.Allocate(memSize) );
 		}
     }
 
@@ -86,7 +86,7 @@ class SamplerIntegrator : IIntegrator
 		foreach (pixelIndex; taskPool.parallel( pixelIter ))
 		{
 			const ulong j = pixelIndex / imageWidth; // current row
-			const ulong i = pixelIndex - j*imageWidth; // current c
+			const ulong i = pixelIndex - j*imageWidth; // current column
 
 			const auto threadId = taskPool.workerIndex;
 
@@ -109,7 +109,7 @@ class SamplerIntegrator : IIntegrator
 			const float ig = pixelColour.g;
 			const float ib = pixelColour.b;
 
-			const ulong baseIndex            = (( j*imageWidth ) + i ) * 3;
+			const ulong baseIndex            = pixelIndex * 3;
 			renderBuffer[ baseIndex ]       += ir;
 			renderBuffer[ baseIndex + 1 ]   += ig;
 			renderBuffer[ baseIndex + 2 ]   += ib;

@@ -29,7 +29,6 @@ void main( string[] args)
 	immutable uint numCPUs = totalCPUs;
     writeln( "Number of CPUs = ", numCPUs );
 
-
     uint imageWidth 	= 640;
     uint imageHeight 	= 480;
 
@@ -44,10 +43,10 @@ void main( string[] args)
     ulong       stackSize = MegaBytes( 500 );
     void*       rootMemAllocAddress = CAlignedMalloc( stackSize, 16 );
     scope(exit) CAlignedFree( rootMemAllocAddress );
-    // StackAlloc  rootMemAlloc = new StackAlloc( rootMemAllocAddress, stackSize );
+	
     IMemAlloc  rootMemAlloc = new StackAlloc( rootMemAllocAddress, stackSize );
 	immutable ulong geoStackSize = MegaBytes( 100 );
-	BaseMemAlloc geoAlloc = new StackAlloc( cast(void*) rootMemAlloc.Allocate( geoStackSize ), geoStackSize );
+	BaseMemAlloc geoAlloc = new StackAlloc( rootMemAlloc.Allocate( geoStackSize ) );
 
     //
     // Set up Render and Display bufferss
@@ -225,7 +224,7 @@ void main( string[] args)
             if ( !renderHasConverged )
             {
                 // writeln("Performing Render Progression # ", numProgressions, "" );
-				write("Performing render progression ", numProgressions, "\r");
+				write("Performing render progression ", numProgressions+1, "\r");
 
                 renderHasConverged = integrator.RenderProgression( &scene );
                 ++numProgressions;
