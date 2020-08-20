@@ -24,65 +24,6 @@ interface IIntegrator
     bool RenderProgression( Scene* scene, int numProgressions = 1 );
 }
 
-class HelloWorldIntegrator : IIntegrator
-{
-    Camera      m_camera; // render camera
-    Image_F32*  m_image;
-
-    this( Camera cam, Image_F32* image )
-    {
-        m_camera = cam;
-        m_image  = image;
-    }
-
-    override void
-    Init( in Scene* scene, IMemAlloc* memArena )
-    {
-        // writeln( "HelloWorldIntegrator::Init()!");
-    }
-
-    /**
-        This just draws a checkerboard to the render buffer, nothing fancy
-        Really only performs a single progression, regardless of what's requested
-
-        Returns: true, since render converges immediately
-    */
-    override bool
-    RenderProgression( Scene* scene, int numProgressions = 1 )
-    {
-        // writeln( "HelloWorldIntegrator::Render()!");
-        uint tileSize = 64;
-        uint imageWidth = m_image.m_imageWidth;
-        uint imageHeight = m_image.m_imageHeight;
-        float[] imageBufferData = m_image.m_pixelData;
-
-        foreach( uint row; 0 .. imageHeight )
-        {
-        	foreach( uint col; 0 .. imageWidth )
-            {
-                uint  pixelIndex = 3*( row * imageWidth + col);
-    
-                float r = 1.0f;
-                float g = 1.0f;
-                float b = 1.0f;
-
-                if ( ((col/tileSize) % 2 == 0) ^ ((row/tileSize) % 2 == 0) )
-                {
-                    r = 0.7f;
-                    g = 0.6f;
-                    b = 0.6f;
-                }
-
-                imageBufferData[ pixelIndex     ] = r;
-                imageBufferData[ pixelIndex + 1 ] = g;
-                imageBufferData[ pixelIndex + 2 ] = b;
-            }
-        }
-
-        return true; // converges after first progression
-    }
-}
-
 class SamplerIntegrator : IIntegrator
 {
     BaseSampler*    m_sampler;
@@ -118,7 +59,6 @@ class SamplerIntegrator : IIntegrator
     override void
     Init( in Scene* scene, IMemAlloc* memArena )
     {
-		// m_perThreadArena. = m_numThreads;
 		const auto memSize = m_perThreadArenaSizeBytes;
 		foreach( i; 0..m_numThreads )
 		{
@@ -140,6 +80,8 @@ class SamplerIntegrator : IIntegrator
 		const ulong numPixels = imageHeight * imageWidth;
 		import std.range : iota;
 
+		/// TODO:: Having the taskpool work on tiles (generic 2D intervals) of the image is a more robust strategy
+		///
 		auto pixelIter = iota( numPixels );
 		foreach (pixelIndex; taskPool.parallel( pixelIter ))
 		{
@@ -188,40 +130,6 @@ class SamplerIntegrator : IIntegrator
         int             depth = 0 )
     {
         return vec3( 0.0, 0.0, 1.0 ); // Output just red
-    }
-
-}
-
-class WhittedIntegrator : SamplerIntegrator
-{
-    this( BaseSampler* m_sampler, Camera cam, Image_F32* renderBuffer, uint maxBounces = 6 )
-    {
-        super( m_sampler, cam, renderBuffer, maxBounces );
-    }
-
-    override Spectrum
-    Irradiance(
-        in  Ray      ray,
-        Scene*          scene,
-        BaseSampler*    sampler,
-        IMemAlloc*      memArena,
-        int             depth = 0 )
-    {
-        vec3                radiance;
-        SurfaceInteraction  surfIntx;
-
-        if ( scene.FindClosestIntersection(&ray, surfIntx ) )
-        {
-            radiance = vec3( 1.0 );
-        }
-		else {
-
-        radiance = 0.5*v_normalise( ray.m_dir ) + vec3( 0.5 );
-
-		}
-
-        return radiance;
-
     }
 
 }
