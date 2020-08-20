@@ -19,7 +19,7 @@ interface IIntegrator
 
         Returns: returns whether rendering has converged
     */
-    bool RenderProgression( Scene* scene, IMemAlloc* memArena, int numProgressions = 1 );
+    bool RenderProgression( Scene* scene, int numProgressions = 1 );
 }
 
 class HelloWorldIntegrator : IIntegrator
@@ -46,7 +46,7 @@ class HelloWorldIntegrator : IIntegrator
         Returns: true, since render converges immediately
     */
     override bool
-    RenderProgression( Scene* scene, IMemAlloc* memArena, int numProgressions = 1 )
+    RenderProgression( Scene* scene, int numProgressions = 1 )
     {
         // writeln( "HelloWorldIntegrator::Render()!");
         uint tileSize = 64;
@@ -87,25 +87,45 @@ class SamplerIntegrator : IIntegrator
 	Camera          m_camera;
 	Image_F32*      m_renderBuffer;
 	const uint      m_maxBounces;
+	
 	uint            m_finishedProgressions = 0;
 	const uint      m_maxProgressions;
+	
+	const uint      m_numThreads;
+	const ulong     m_perThreadArenaSizeBytes;
+    BaseMemAlloc[]  m_perThreadArena;
+	
 
-    this( BaseSampler* sampler, Camera cam, Image_F32* renderBuffer, uint maxProgressions = 128, uint maxBounces = 6 )
+    this( BaseSampler* sampler,
+		  Camera cam,
+		  Image_F32* renderBuffer,
+		  uint numThreads,
+		  uint maxProgressions = 128,
+		  uint maxBounces = 6,
+		  ulong perThreadArenaSizeBytes = MegaBytes(2))
     {
-        m_sampler       = sampler;
-        m_camera        = cam;
-        m_renderBuffer  = renderBuffer;
-        m_maxBounces    = maxBounces;
+        m_sampler         = sampler;
+        m_camera          = cam;
+        m_renderBuffer    = renderBuffer;
+        m_maxBounces      = maxBounces;
 		m_maxProgressions = maxProgressions;
+		m_numThreads      = numThreads;
+		m_perThreadArenaSizeBytes = perThreadArenaSizeBytes;
     }
 
     override void
     Init( in Scene* scene, IMemAlloc* memArena )
     {
+		// m_perThreadArena. = m_numThreads;
+		const auto memSize = m_perThreadArenaSizeBytes;
+		foreach( i; 0..m_numThreads )
+		{
+		    m_perThreadArena ~= new StackAlloc( cast(void*) memArena.Allocate( memSize ), memSize );
+		}
     }
 
     override bool
-    RenderProgression( Scene* scene, IMemAlloc* memArena, int numProgressions = 1 )
+    RenderProgression( Scene* scene, int numProgressions = 1 )
     {
         const uint imageWidth = m_renderBuffer.m_imageWidth;
         const uint imageHeight = m_renderBuffer.m_imageHeight;
@@ -132,9 +152,9 @@ class SamplerIntegrator : IIntegrator
                     Ray cameraRay;
                     m_camera.SpawnRay( jitteredPos, cameraDims, cameraRay );
 
-                    pixelColour += Irradiance( cameraRay, scene, m_sampler, memArena );
+                    pixelColour += Irradiance( cameraRay, scene, m_sampler, &m_perThreadArena[0] );
 
-					memArena.Reset();
+					m_perThreadArena[0].Reset();
                 }
 
                 // pixelColour *= (1.0/( cast(float) numProgressions ) );
@@ -213,9 +233,15 @@ class DirectLightingIntegrator : SamplerIntegrator
 {
     LightingStrategy m_lightingStrategy;
 
-    this( BaseSampler* sampler, Camera cam, Image_F32* renderBuffer, uint maxProgressions = 64, LightingStrategy lightingStrategy=LightingStrategy.UniformSampleOne )
+    this( BaseSampler* sampler,
+	      Camera cam,
+		  Image_F32* renderBuffer,
+		  uint numThreads,
+		  uint maxProgressions = 64,
+		  LightingStrategy lightingStrategy=LightingStrategy.UniformSampleOne,
+		  ulong perThreadArenaSize = MegaBytes(2))
 	{
-		super( sampler, cam, renderBuffer, maxProgressions, /* max bounces */ );
+		super( sampler, cam, renderBuffer, numThreads, maxProgressions, 1 /* max bounces */, perThreadArenaSize );
 		m_lightingStrategy = lightingStrategy;
 	}
 	
