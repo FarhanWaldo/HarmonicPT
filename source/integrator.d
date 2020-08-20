@@ -1,3 +1,5 @@
+import std.parallelism;
+
 import fwmath;
 import scene;
 import camera;
@@ -133,42 +135,43 @@ class SamplerIntegrator : IIntegrator
 
         float[] renderBuffer = m_renderBuffer.m_pixelData;
 		
-        // TODO:: Have better pixel filtering
+        // TODO:: Have pixel filtering
         //
-        foreach ( uint j; 0 .. imageHeight )
-        {
-            foreach( uint i; 0 .. imageWidth )
-            {
-				// {{
-                // // thread id stuff
-                
-                Spectrum pixelColour = Spectrum(0.0);
+		const ulong numPixels = imageHeight * imageWidth;
+		import std.range : iota;
 
-                foreach ( progression; 0 .. numProgressions )
-                {
-                    const vec2 pixelPos = vec2( cast(float) i, cast(float) j );
-                    const vec2 jitteredPos = pixelPos + m_sampler.Get2D();
+		auto pixelIter = iota( numPixels );
+		foreach (pixelIndex; taskPool.parallel( pixelIter ))
+		{
+			const ulong j = pixelIndex / imageWidth; // current row
+			const ulong i = pixelIndex - j*imageWidth; // current c
 
-                    Ray cameraRay;
-                    m_camera.SpawnRay( jitteredPos, cameraDims, cameraRay );
+			const auto threadId = taskPool.workerIndex;
 
-                    pixelColour += Irradiance( cameraRay, scene, m_sampler, &m_perThreadArena[0] );
+			Spectrum pixelColour = Spectrum(0.0);
 
-					m_perThreadArena[0].Reset();
-                }
+			foreach ( progression; 0 .. numProgressions )
+			{
+				const vec2 pixelPos = vec2( cast(float) i, cast(float) j );
+				const vec2 jitteredPos = pixelPos + m_sampler.Get2D();
 
-                // pixelColour *= (1.0/( cast(float) numProgressions ) );
+				Ray cameraRay;
+				m_camera.SpawnRay( jitteredPos, cameraDims, cameraRay );
 
-                const float ir = pixelColour.r;
-                const float ig = pixelColour.g;
-                const float ib = pixelColour.b;
+				pixelColour += Irradiance( cameraRay, scene, m_sampler, &m_perThreadArena[threadId] );
 
-                const ulong baseIndex            = (( j*imageWidth ) + i ) * 3;
-                renderBuffer[ baseIndex ]       += ir;
-                renderBuffer[ baseIndex + 1 ]   += ig;
-                renderBuffer[ baseIndex + 2 ]   += ib;
-            }
-        }
+				m_perThreadArena[threadId].Reset();
+			}
+
+			const float ir = pixelColour.r;
+			const float ig = pixelColour.g;
+			const float ib = pixelColour.b;
+
+			const ulong baseIndex            = (( j*imageWidth ) + i ) * 3;
+			renderBuffer[ baseIndex ]       += ir;
+			renderBuffer[ baseIndex + 1 ]   += ig;
+			renderBuffer[ baseIndex + 2 ]   += ib;
+		}
 
 		m_finishedProgressions += numProgressions;
 		
