@@ -3,6 +3,7 @@ import std.stdio;
 import std.algorithm;
 import std.math;
 import std.range;
+import std.parallelism;
 import std.conv : emplace;
 
 import derelict.sdl2.sdl;
@@ -19,11 +20,16 @@ import material;
 import spectrum;
 import texture;
 
+
+
 void main( string[] args)
 {
     // Disable the garbage collector
     // GC.disable;
-	
+	immutable uint numCPUs = totalCPUs;
+    writeln( "Number of CPUs = ", numCPUs );
+
+
     uint imageWidth 	= 640;
     uint imageHeight 	= 480;
 
@@ -199,14 +205,10 @@ void main( string[] args)
                  45.0f,
                  0.1, 10000.0f );
 
-    // IIntegrator integrator = new HelloWorldIntegrator( renderCam, &renderImage );
+	
     BaseSampler sampler = new PixelSampler( 32, 0, 43123 /* random seed */ );
-    // IIntegrator integrator = new SamplerIntegrator( &sampler, renderCam, &renderImage );
-    // IIntegrator integrator = new WhittedIntegrator( &sampler, renderCam, &renderImage );
-	immutable ulong renderMemArenaSizeBytes = MegaBytes( 1 );
-	BaseMemAlloc integratorArena = new StackAlloc( cast(void*) rootMemAlloc.Allocate( renderMemArenaSizeBytes ), renderMemArenaSizeBytes );
-	IIntegrator integrator = new DirectLightingIntegrator( &sampler, renderCam, &renderImage );
-    integrator.Init( &scene, &integratorArena );
+	IIntegrator integrator = new DirectLightingIntegrator( &sampler, renderCam, &renderImage, numCPUs );
+    integrator.Init( &scene, &rootMemAlloc );
 
     //
     //  Event/Render loop
@@ -225,9 +227,7 @@ void main( string[] args)
                 // writeln("Performing Render Progression # ", numProgressions, "" );
 				write("Performing render progression ", numProgressions, "\r");
 
-                renderHasConverged =
-                    integrator.RenderProgression( &scene, &integratorArena );
-
+                renderHasConverged = integrator.RenderProgression( &scene );
                 ++numProgressions;
 				
                 tonemap();
