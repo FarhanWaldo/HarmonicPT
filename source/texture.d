@@ -1,10 +1,13 @@
 import fwmath;
 import spectrum;
+import interactions;
+
+extern(C) byte* stbi_load( char* filename, int x, int y, int n, int desiredChannels =0 );
 
 interface ITexture
 {
 	pure const @nogc @safe nothrow
-	Spectrum Sample( vec2 uv, vec3 P );
+	Spectrum Sample( CSurfaceInteraction* surfIntx );
 }
 
 class FlatColour : ITexture
@@ -17,8 +20,9 @@ class FlatColour : ITexture
 	}
 
 	override pure const @nogc @safe nothrow
-	Spectrum Sample( vec2 uv, vec3 P )
+	Spectrum Sample( CSurfaceInteraction* surfIntx )
 	{
 		return m_colour;
 	}
 }
+

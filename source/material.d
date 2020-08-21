@@ -34,7 +34,7 @@ class MatteMaterial : IMaterial
 	{
 		si.m_bsdf = memArena.AllocInstance!Bsdf( si.m_normal, si.m_shading.n, si.m_shading.dpdu );
 
-		Spectrum reflectance = m_albedo.Sample( si.m_uv, si.m_pos );
+		Spectrum reflectance = m_albedo.Sample( si );
 		const (BaseBxDF)* lambertLobe = memArena.AllocInstance!LambertBrdf( reflectance );
 		si.m_bsdf.AddBxDF( lambertLobe );
 	}
