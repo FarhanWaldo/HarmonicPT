@@ -158,7 +158,7 @@ T[] AllocArray( T )( BaseMemAlloc* memAlloc, u64 numElements, u64 alignment= 16 
 	static if (is(T==class)) {
 		static assert(false,"AllocArray!T Called with a class type, unequipped to handle that"); 
 	}
-    return cast( T[] )( memAlloc.Allocate( numElements * T.sizeof , 16 ) );
+    return cast( T[] )( memAlloc.Allocate( numElements * T.sizeof , alignment ) );
 }
 
 /**

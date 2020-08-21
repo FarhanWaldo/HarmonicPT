@@ -11,22 +11,27 @@
 	"copyright": "Copyright © 2019, Farhan Wali",
 	"dependencies": {
 		"derelict-gl3": "~>1.0.24",
-		"derelict-sdl2": "~>2.1.4"
+		"derelict-sdl2": "~>2.1.4",
 	},
 	"description": "A Physically Based Path Tracing Renderer written in D",
+	"dflags": [
+		"-gf"
+	],
 	"license": "proprietary",
 	"name": "d-pathtracer",
-    
-	"sourceFiles-windows-x86_64-dmd": [
-		"source/stb_image_write.obj"
+	"sourceFiles-osx-x86_64-dmd": [
+		"source/stb_image_write.o"
 	],
-    "sourceFiles-osx-x86_64-dmd": [
-        "source/stb_image_write.o"
-    ],
-    
+	"sourceFiles-windows-x86_64-dmd": [
+		"source/stb_image_write.obj",
+		"source/stb_image.obj"
+	],
+	"stringImportPaths": [
+		"tables"
+	],
 	"targetPath": "bin/",
 	"targetType": "executable",
-	"versions": ["DerelictSDL2_Static"],
-	"stringImportPaths": ["tables"],
-	"dflags": ["-gf"],
+	"versions": [
+		"DerelictSDL2_Static"
+	]
 }
