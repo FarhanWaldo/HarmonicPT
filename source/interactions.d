@@ -50,6 +50,9 @@ struct Interaction
     }
 }
 
+/**
+    Gives 
+ */
 struct SurfaceInteraction
 {
     Interaction m_interaction;
@@ -57,16 +60,16 @@ struct SurfaceInteraction
 	
     struct Shading
     {
-        vec3    n;
+        vec3    n;    /// Shading normal. Can be different from m_normal (geometric normal) due to normal mapping, for example
         vec3    dpdu, dpdv;
         vec3    dndu, dndv;
     }
 
     vec2            m_uv;
-    vec3            m_dpdu, m_dpdv;
-    vec3            m_dndu, m_dndv;
+    vec3            m_dpdu, m_dpdv;  /// Derivatives of position w.r.t. surface parameterisation ( R^2 => R^3 )
+    vec3            m_dndu, m_dndv;  /// Derivatives of surface normal w.r.t. surface parameterisation ( R^2 => R^3 )
 
-    Shading         m_shading; // The shading coordinate system
+    Shading         m_shading; /// The shading coordinate system
 
     IMaterial*        m_material;
     CPrimCommon*      m_prim;
