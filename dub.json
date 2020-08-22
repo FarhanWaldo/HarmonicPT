@@ -14,8 +14,11 @@
 		"derelict-sdl2": "~>2.1.4",
 	},
 	"description": "A Physically Based Path Tracing Renderer written in D",
-	"dflags": [
+	"dmd-dflags": [
 		"-gf"
+	],
+	"ldc2-dflags": [
+		"-g", "-O", "-release", "-mcpu=native"
 	],
 	"license": "proprietary",
 	"name": "d-pathtracer",
@@ -26,6 +29,10 @@
 		"source/stb_image_write.obj",
 		"source/stb_image.obj"
 	],
+	"sourceFiles-windows-x86_64-ldc": [
+		"source/stb_image_write.obj",
+		"source/stb_image.obj"
+	],
 	"stringImportPaths": [
 		"tables"
 	],
@@ -33,5 +40,5 @@
 	"targetType": "executable",
 	"versions": [
 		"DerelictSDL2_Static"
-	]
+	],
 }

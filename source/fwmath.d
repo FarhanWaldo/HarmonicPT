@@ -2,7 +2,7 @@ import std.math;
 
 // Emit an actual FMA instruction... damn you, Phobos
 //
-
+version(none){
 // F_TODO:: fw_fma won't get inlined, it's better to use a compiler intrinsic for this rather than inline asm
 //          Look into using LDC, which inserts a compiler intrinsic when using std.math.fma
 
@@ -31,6 +31,47 @@ float fw_fma( float a, float b, float c ) @safe pure @nogc nothrow {
 		ret;
 	}
 }
+}
+
+version( LDC )
+{
+    /// LDC has an llvm intrinsic for using the actual fma instructions (if available on target compilation machine)
+	/// 
+    import ldc.intrinsics : llvm_fma;
+    alias llvm_fma fw_fma;
+}
+else
+{
+    ///  NOTE: fw_fma won't get inlined, it's better to use a compiler intrinsic for this rather than inline asm
+	///
+	///
+	/**
+		Returns the value of a*b + c, evaluated with an FMA instruction
+		vfmadd231sd (double precision)
+	*/
+	pragma(inline)
+	double fw_fma( double a, double b, double c ) @safe pure @nogc nothrow {
+		asm @safe pure @nogc nothrow {
+			naked;
+			vfmadd231sd XMM0, XMM1, XMM2;
+			ret;
+		}
+	}
+
+	/**
+		Returns the value of a*b + c, evaluated with an FMA instruction
+		vfmadd231ss (single precision)
+	*/
+	pragma(inline)
+	float fw_fma( float a, float b, float c ) @safe pure @nogc nothrow {
+		asm @safe pure @nogc nothrow {
+			naked;
+			vfmadd231ss XMM0, XMM1, XMM2;
+			ret;
+		}
+	}
+}
+
 
 // Compute the product a*b - c*d, where a, b, c, and d are floats
 // This uses fma for increased precision, so catastrophic cancellation can be avoided 
@@ -42,6 +83,8 @@ float diffOfProducts( float a, float b, float c, float d ) {
 	float dop = fw_fma( a, b, -cd );
 	return dop + err;
 }
+
+
 
 //////////////////////////////////////////
 //

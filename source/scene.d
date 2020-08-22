@@ -131,7 +131,7 @@ AABB Prim_ComputeBBox(T)( const(T)* prim )
 
 
 
-pragma(inline, true) pure @nogc @trusted nothrow
+pragma(inline) pure @nogc @trusted nothrow
 IMaterial*
 Prim_GetMaterial( const(PrimCommon)* prim )
 {
@@ -153,7 +153,7 @@ Prim_GetMaterial( const(PrimCommon)* prim )
 	}
 }
 
-pragma(inline, true) pure @nogc @trusted nothrow
+pragma(inline) pure @nogc @trusted nothrow
 ShapeCommon*
 Prim_GetShape( const(PrimCommon)* prim )
 {
@@ -171,7 +171,7 @@ Prim_GetShape( const(PrimCommon)* prim )
 	}
 }
 
-pragma(inline, true) pure @nogc @trusted nothrow
+pragma(inline) pure @nogc @trusted nothrow
 bool
 Prim_IntersectsRay( const(PrimCommon)* prim, const(Ray)* ray, ref ScenePrimIntersection primIntx )
 {
@@ -190,7 +190,7 @@ Prim_IntersectsRay( const(PrimCommon)* prim, const(Ray)* ray, ref ScenePrimInter
 }
 
 
-pragma(inline, true) pure @nogc @trusted nothrow
+pragma(inline) pure @nogc @trusted nothrow
 LightCommon* Prim_GetLight( CPrimCommon* prim )
 {
 	switch ( prim.GetPrimType() )

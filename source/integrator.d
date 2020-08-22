@@ -279,7 +279,7 @@ class PathTracingIntegrator : SamplerIntegrator
 
 			if ( bounce > 4 )
 			{
-			    const float p = Max( Max( throughput.x, throughput.y ), throughput.z );
+			    const float p = (throughput.x + throughput.y + throughput.z) / 3.0f;
 			    const float q = Max( 0.05f, 1.0f - p );
 
 				if ( sampler.Get1D() < q )

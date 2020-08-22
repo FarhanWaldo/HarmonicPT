@@ -123,7 +123,7 @@ bool Sphere_IntersectsRay( const(ShapeSphere)* shpSphere, const(Ray)* ray, ref I
 
 }
 
-pragma(inline,true) pure @nogc @trusted nothrow
+pragma(inline) pure @nogc @trusted nothrow
 float Shape_Pdf( CShapeCommon* shape, CInteraction* refPoint, in vec3 wi )
 {
     switch( shape.m_shapeType )
@@ -156,7 +156,7 @@ float Sphere_Pdf( CShapeSphere* sphere, CInteraction* refPoint, in vec3 wi )
 	return UniformConePdf( cosThetaMax );
 }
 
-pragma(inline, true) pure @nogc @trusted nothrow
+pragma(inline) pure @nogc @trusted nothrow
 Interaction
 Shape_Sample( CShapeCommon* shape, CInteraction* refPoint, in vec2 randomSample )
 {
