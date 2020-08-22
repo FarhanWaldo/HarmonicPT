@@ -210,7 +210,8 @@ void main( string[] args)
 
 	
     BaseSampler sampler = new PixelSampler( 32, 0, 43123 /* random seed */ );
-	IIntegrator integrator = new DirectLightingIntegrator( &sampler, renderCam, &renderImage, numCPUs );
+	// IIntegrator integrator = new DirectLightingIntegrator( &sampler, renderCam, &renderImage, numCPUs );
+	IIntegrator integrator = new PathTracingIntegrator( &sampler, renderCam, &renderImage, numCPUs );
     integrator.Init( &scene, &rootMemAlloc );
 
     //

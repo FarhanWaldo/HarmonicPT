@@ -150,13 +150,13 @@ class DirectLightingIntegrator : SamplerIntegrator
 		  uint numThreads,
 		  uint maxProgressions = 64,
 		  LightingStrategy lightingStrategy=LightingStrategy.UniformSampleOne,
-		  ulong perThreadArenaSize = MegaBytes(2))
+		  ulong perThreadArenaSize = MegaBytes(1))
 	{
 		super( sampler, cam, renderBuffer, numThreads, maxProgressions, 1 /* max bounces */, perThreadArenaSize );
 		m_lightingStrategy = lightingStrategy;
 	}
 	
-	override Spectrum
+	override final Spectrum
 	Irradiance( in Ray ray, Scene* scene, BaseSampler* sampler, IMemAlloc* memArena, int depth = 0 )
 	{
 		Spectrum radiance = Spectrum(0.0f);
@@ -199,6 +199,99 @@ class DirectLightingIntegrator : SamplerIntegrator
 		}
 		
 		return radiance;
+	}
+}
+
+class PathTracingIntegrator : SamplerIntegrator
+{
+	this( BaseSampler* sampler,
+		  Camera       cam,
+		  Image_F32*   renderBuffer,
+		  uint         numThreads,
+		  uint         maxProgressions = 512,
+		  uint         maxBounces      = 6,
+		  ulong        perThreadArenaSize = MegaBytes(2) )
+	{
+		super( sampler, cam, renderBuffer, numThreads, maxProgressions, maxBounces, perThreadArenaSize );
+	}
+
+	override final Spectrum
+	Irradiance( in Ray _ray, Scene* scene, BaseSampler* sampler, IMemAlloc* memArena, int depth = 0 )
+	{
+	    Spectrum irradiance = Spectrum( 0.0f );
+		Spectrum throughput = Spectrum( 1.0f );
+
+        bool specularBounce = false;
+		
+		Ray ray = _ray;
+		for ( int bounce = 0;; ++bounce )
+		{
+			memArena.Reset();
+		    SurfaceInteraction surfIntx;
+			const bool foundIntersection = scene.FindClosestIntersection( &ray, surfIntx );
+
+			vec3 wo = surfIntx.m_wo;
+
+			if ( bounce == 0 && foundIntersection )
+			{
+			    irradiance += surfIntx.GetAreaLightEmission( wo );
+			}
+			if ( !foundIntersection || bounce >= m_maxBounces )
+			{
+			    break;
+			}
+
+			ComputeScatteringFunctions( &surfIntx, memArena, true /* from eyes */, true /* allow multiples lobes */ );
+
+			///  The renderer can use geometric primitives that don't create a valid BSDF in the surface interaction to represent geometry
+			///    that's meant for creating boundaries between things. For example, the hull of a participating medium
+			///
+			if ( !surfIntx.m_bsdf )
+			{
+			    ray = surfIntx.CreateRay( ray.m_dir );
+				bounce--;
+				continue;
+			}
+ 
+			///  Accumulate irradiance from direct lighting
+			///
+			irradiance += throughput*UniformSampleOneLight( cast(CInteraction*) &surfIntx, scene, memArena, sampler );
+
+            ///  Now sample the BSDF for the next ray direction
+			///
+			vec3 wi   = vec3(0.0f);
+			float pdf = 0.0f;
+			BxDFType flags;
+			Spectrum F = surfIntx.m_bsdf.Sample_F( wo, wi, sampler.Get2D(), pdf, BxDFType_All, &flags );
+
+			if ( F.IsBlack() || pdf == 0.0f )
+			{
+			    break;
+			}
+
+			specularBounce = IsSpecular( flags );
+			/// TRANSMISSION HACK
+			/// bool transmission bounce
+
+			throughput = throughput*F*Abs( v_dot(wi,surfIntx.m_shading.n) )/pdf;
+
+			ray = surfIntx.CreateRay( wi );
+
+			if ( bounce > 4 )
+			{
+			    const float p = Max( Max( throughput.x, throughput.y ), throughput.z );
+			    const float q = Max( 0.05f, 1.0f - p );
+
+				if ( sampler.Get1D() < q )
+				{
+				    break;
+				}
+
+				throughput *= 1.0f/(1.0f - q);
+			}
+		}
+		
+		return irradiance;
 	}
 }
 
