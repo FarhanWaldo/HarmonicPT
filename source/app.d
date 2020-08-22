@@ -36,7 +36,7 @@ void main( string[] args)
     float* pImageBufferData;
 	ubyte* pDisplayBufferData;
 
-	float whitepoint = 5.0f;
+	float whitepoint = 1.0f;
 	
     // Create global memory allocator
     //
@@ -127,6 +127,8 @@ void main( string[] args)
     bool        renderHasConverged = false;
 
     void tonemap() {
+		import std.math : pow;
+		
 		float invNumProgressions = 1.0f/(cast(float) numProgressions);
         //	Create LDR display buffer from HDR render buffer
         //
@@ -134,13 +136,15 @@ void main( string[] args)
         {
             foreach ( uint col; 0..imageWidth )
             {
-                uint pixelIndex = 3 * ( row * imageWidth + col );
+                const uint pixelIndex = 3 * ( row * imageWidth + col );
 
-                // F_TODO:: sqrt approximates linear -> gamme space conversion
-                //
-                pDisplayBufferData[ pixelIndex ] 		= cast(ubyte) Min( 255, ( sqrt( ( invNumProgressions*pImageBufferData[ pixelIndex ] / whitepoint ) ) * 255.0f ) );
-                pDisplayBufferData[ pixelIndex  + 1 ] 	= cast(ubyte) Min( 255, ( sqrt( ( invNumProgressions*pImageBufferData[ pixelIndex + 1 ] / whitepoint ) ) * 255.0f ) );
-                pDisplayBufferData[ pixelIndex  + 2 ] 	= cast(ubyte) Min( 255, ( sqrt( ( invNumProgressions*pImageBufferData[ pixelIndex + 2 ] / whitepoint ) ) * 255.0f ) );
+				ubyte floatToUbyte( float v ) {
+					return cast(ubyte) Min( 255, 255.0f*pow( invNumProgressions*v/whitepoint, 2.2f ));
+				}
+
+				pDisplayBufferData[ pixelIndex ]   = floatToUbyte( pImageBufferData[ pixelIndex ] );
+				pDisplayBufferData[ pixelIndex+1 ] = floatToUbyte( pImageBufferData[ pixelIndex+1 ] );
+				pDisplayBufferData[ pixelIndex+2 ] = floatToUbyte( pImageBufferData[ pixelIndex+2 ] );				
             }
         }
     }
@@ -167,26 +171,26 @@ void main( string[] args)
 
     ITexture texRed = new FlatColour( Spectrum( 1.0f, 0.0f, 0.0f ) );
 	ITexture texWhite = new FlatColour( Spectrum( 1.0f, 1.0f, 1.0f ) );
-
+    ITexture texImgBrickWall = ImageTexture_LoadFromFile( "assets/brick_wall.jpg", true /* do linear space conversion*/ );
+	
 	IMaterial lambertRed = *geoAlloc.AllocInstance!MatteMaterial( &texRed );
 	IMaterial lambertWhite = *geoAlloc.AllocInstance!MatteMaterial( &texWhite ); 
+    IMaterial brickWallAlbedo = *geoAlloc.AllocInstance!MatteMaterial( &texImgBrickWall );
 	
 	auto sph0 = MakeSphere( vec3( 0.0f, 0.0f, 0.0f ), 1.0f );
-	sph0.m_shapeType = EShape.Sphere;
-	// auto prim0 = MakeSurfacePrim( sph0, lambertRed );
-	auto prim0 = MakeSurfacePrim( sph0, &lambertRed );
+	// auto prim0 = MakeSurfacePrim( sph0, &lambertRed );
+	auto prim0 = MakeSurfacePrim( sph0, &brickWallAlbedo );
 	
-	auto sph1 = MakeSphere( vec3( 0.0f, -201.0f, 0.0f ), 200.0f ); /// F_TODO:: Missing intersections at top of sphere once r >= 500
+	auto sph1 = MakeSphere( vec3( 0.0f, -601.0f, 0.0f ), 600.0f ); /// F_TODO:: Missing intersections at top of sphere once r >= 500
 	auto prim1 = MakeSurfacePrim( sph1, &lambertWhite );
 
 	import light;
 	
     auto sph_lightGeo = MakeSphere( vec3( 0.0f, 10.0f, 0.0f ), 3.0f );
-	auto sph_light = cast(LightCommon*) geoAlloc.AllocInstance!DiffuseAreaLight( Spectrum(10.0f), sph_lightGeo, 10 /* num samples */ );
+	auto sph_light = cast(LightCommon*) geoAlloc.AllocInstance!DiffuseAreaLight( Spectrum(5.0f), sph_lightGeo, 10 /* num samples */ );
 	auto prim_light = cast(PrimCommon*) geoAlloc.AllocInstance!EmissiveSurfacePrim( sph_lightGeo, nullMtl, sph_light );
 	
 	import datastructures;
-	// auto prims = CreateBuffer!(PrimCommon*)( geoAlloc, 256 );
 	auto primBuffer = BufferT!( PrimCommon*, 512 )();
 	primBuffer.Push( prim0 );
 	primBuffer.Push( prim1 );
@@ -247,5 +251,5 @@ void main( string[] args)
 
 	writeln("\nRender is finished!\n");
 
-    ImageBuffer_WriteToPng( &renderImage, cast(char*) "render.png" );
+    ImageBuffer_WriteToPng( &displayImage, cast(char*) "render.png" );
 }

@@ -2,7 +2,7 @@ import fwmath;
 import spectrum;
 import interactions;
 
-extern(C) byte* stbi_load( char* filename, int x, int y, int n, int desiredChannels =0 );
+extern(C) nothrow ubyte* stbi_load( char* filename, int* x, int* y, int* n, int desiredChannels =0 );
 
 interface ITexture
 {
@@ -30,19 +30,20 @@ class FlatColour : ITexture
  */
 class ImageTexture : ITexture
 {
-	const(byte)* m_imageData;
-	const uint   m_height;
+	const(ubyte)* m_imageData;     /// A read-only, non-owning pointer to image data. One byte per channel.
+	const uint   m_height;       
 	const uint   m_width;
 	const uint   m_numChannels;
+	const bool   m_doGammaToLinearConversion = false;
 
-	this( byte* imgDataPtr, uint imgHeight, uint imgWidth, uint numChannels )
+	pure @nogc nothrow
+	this( ubyte* imgDataPtr, uint imgHeight, uint imgWidth, uint numChannels, bool makeLinearSpace = false )
 	{
-		assert( imgDataPtr != null, "Image texture being created with null imgDataPtr" );
-		
 		m_imageData = imgDataPtr;
 		m_height    = imgHeight;
 		m_width     = imgWidth;
 		m_numChannels = numChannels;
+		m_doGammaToLinearConversion = makeLinearSpace;
 	}
 
 	override pure const @nogc @trusted nothrow
@@ -50,42 +51,60 @@ class ImageTexture : ITexture
 	{
 		vec3 color = vec3(0.0f);
 
-        /*
-            byte* pData     = m_imgData;
-            int nx          = m_imgWidth;
-            int ny          = m_imgHeight;
-
-            int i = uv.u * nx;
-            int j = (1.0f - uv.v) * ny - 0.001;
-            CLAMP_VAR( i, 0, nx - 1);
-            CLAMP_VAR( j, 0, ny - 1 );
-
-
-            float r = int(pData[3 * i + 3 * nx*j]) / 255.0;
-            float g = int(pData[3 * i + 3 * nx*j + 1]) / 255.0;
-            float b = int(pData[3 * i + 3 * nx*j + 2]) / 255.0;
-
-            r = pow( r, 1.0/2.2 );
-            g = pow( g, 1.0/2.2 );
-            b = pow( b, 1.0/2.2 );
-
-            colour = { r, g, b };
-		 */
-
-        const(byte)* pData = m_imageData;
-		const uint   ny    = m_height;
-		const uint   nx    = m_width;
-		const uint   nc    = Min( 3, m_numChannels ); /// Cap out at 3 channels (RGB)
-		const vec2   uv    = surfIntx.m_uv;           /// UV coordinates!
-
-		const int i = Clamp( cast(int)( uv[0]*nx ), 0, nx - 1 );
-		const int j = Clamp( cast(int)( (1.0f - uv[1])*ny -0.001 ), 0, ny -1 );
-
-		foreach ( c; 0..nc )
+	    if ( m_imageData )
 		{
-		    color.data[c] = Min( 1.0f, cast(float)( pData[nc*nx*j + nc*i + c]/255.0f ) );
+			import std.math;
+			const(ubyte)* pData = m_imageData;
+			const uint   ny    = m_height;
+			const uint   nx    = m_width;
+			const uint   nc    = Min( 3, m_numChannels ); /// Cap out at 3 channels (RGB)
+			const vec2   uv    = surfIntx.m_uv;           /// UV coordinates!
+
+			const int i = Clamp( cast(int)( uv[0]*nx ), 0, nx - 1 );
+			const int j = Clamp( cast(int)( (1.0f - uv[1])*ny -0.001 ), 0, ny -1 );
+
+			foreach ( c; 0..nc )
+			{
+			    float value = Clamp( cast(float)( pData[m_numChannels*(nx*j + i) + c]/255.0f ), 0.0f, 1.0f );
+				if ( m_doGammaToLinearConversion ) {
+					value = pow(value, 1.0/2.2 );
+				}
+
+				color[c] = value;
+			}
+		}
+		else
+		{
+		    color = vec3( 0.9f, 0.0f, 0.9f ); /// if texture is missing, return magenta
 		}
 		
 		return color;
 	}
 }
+
+
+
+@trusted  
+// bool LoadFromFile( ImageTexture imgTex, string filename )
+ImageTexture ImageTexture_LoadFromFile( string filename, bool convertToLinearSpace = false )
+{
+    ImageTexture newTex;
+	import std.stdio : writeln;
+    // assert( imgTex is null, "LoadFromFile() | Making sure ImageTexture object is null before we load a new file into it " );
+
+	int width, height, numComponents;
+	ubyte* imageData = stbi_load( cast(char*) filename, &width, &height, &numComponents, 0 /* desired components */ );
+
+	if ( imageData == null ) {
+	    writeln("[ERROR] Couldn't load texture '", filename, "'");
+	    // return false;
+	}
+	else {
+		newTex = new ImageTexture( imageData, width, height, numComponents, convertToLinearSpace );
+		writeln("Succesfully loaded texture file '", filename, "'" );
+	}
+	
+    return newTex;
+	// return true;
+}
+

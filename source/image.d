@@ -81,7 +81,7 @@ ImageBuffer_WriteToPng(T)( ImageBuffer!T* pImageBuffer, char* filename )
     int imageHeight             = pImageBuffer.m_imageHeight;
     int imageWidth              = pImageBuffer.m_imageWidth;
     int numComponents           = pImageBuffer.m_componentsPerPixel;
-    float* pImageBufferData     = &pImageBuffer.m_pixelData[0];
+    T*  pImageBufferData        = &pImageBuffer.m_pixelData[0];
 
     // Create 32 bpp image for png
     //
@@ -92,11 +92,21 @@ ImageBuffer_WriteToPng(T)( ImageBuffer!T* pImageBuffer, char* filename )
     {
         for ( int col = 0; col < imageWidth; ++col )
         {
-            int pixelIndex = row * imageWidth + col;
+            const int pixelIndex = row * imageWidth + col;
+			const int compIndex = numComponents*pixelIndex;
 
-            uint ri = cast(uint)( min( pImageBufferData[ numComponents*pixelIndex    ], 1.0f)*255.0f );
-            uint gi = cast(uint)( min( pImageBufferData[ numComponents*pixelIndex + 1], 1.0f)*255.0f );
-            uint bi = cast(uint)( min( pImageBufferData[ numComponents*pixelIndex + 2], 1.0f)*255.0f );
+			static if (is(T==ubyte))
+			{
+				uint ri = pImageBufferData[ compIndex ];
+				uint gi = pImageBufferData[ compIndex + 1 ];
+				uint bi = pImageBufferData[ compIndex + 2 ];
+			}
+			else
+			{
+				uint ri = cast(uint)( min( pImageBufferData[ compIndex ], 1.0f)*255.0f );
+				uint gi = cast(uint)( min( pImageBufferData[ compIndex + 1], 1.0f)*255.0f );
+				uint bi = cast(uint)( min( pImageBufferData[ compIndex + 2], 1.0f)*255.0f );
+			}
             uint alpha = 0xFF;
 
             uint colour = ( alpha << 24 ) | ( bi << 16 ) | ( gi << 8 ) | ri;
