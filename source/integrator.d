@@ -248,9 +248,10 @@ class PathTracingIntegrator : SamplerIntegrator
 			///
 			if ( !surfIntx.m_bsdf )
 			{
-			    ray = surfIntx.CreateRay( ray.m_dir );
-				bounce--;
-				continue;
+				break;
+			    // ray = surfIntx.CreateRay( ray.m_dir );
+				// bounce--;
+				// continue;
 			}
  
 			///  Accumulate irradiance from direct lighting

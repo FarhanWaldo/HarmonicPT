@@ -158,6 +158,9 @@ void main( string[] args)
     //
     //  Scene Init
     //
+	import datastructures;
+	auto primBuffer = BufferT!( PrimCommon*, 512 )();
+
 	IMaterial* nullMtl = null;
 
 	ShapeCommon* MakeSphere( vec3 centre, float radius )
@@ -169,34 +172,46 @@ void main( string[] args)
 		return cast(PrimCommon*) geoAlloc.AllocInstance!SurfacePrim( shp, mtl );
 	}  
 
-    ITexture texRed = new FlatColour( Spectrum( 1.0f, 0.0f, 0.0f ) );
-	ITexture texWhite = new FlatColour( Spectrum( 1.0f, 1.0f, 1.0f ) );
+    void MakeSphereSurfacePrim( vec3 centre, float radius, IMaterial* mtl )
+	{
+		auto sph = MakeSphere( centre, radius );
+		auto prim = MakeSurfacePrim( sph, mtl );
+		primBuffer.Push( prim );
+	}
+	
+    ITexture texRed   = new FlatColour( Spectrum( 0.8f, 0.0f, 0.0f ) );
+    ITexture texGreen = new FlatColour( Spectrum( 0.0f, 0.8f, 0.0f ) );
+    ITexture texBlue  = new FlatColour( Spectrum( 0.0f, 0.0f, 0.8f ) );
+	ITexture texWhite = new FlatColour( Spectrum( 0.8f, 0.8f, 0.8f ) );
     ITexture texImgBrickWall = ImageTexture_LoadFromFile( "assets/brick_wall.jpg", true /* do linear space conversion*/ );
 	
-	IMaterial lambertRed = *geoAlloc.AllocInstance!MatteMaterial( &texRed );
-	IMaterial lambertWhite = *geoAlloc.AllocInstance!MatteMaterial( &texWhite ); 
-    IMaterial brickWallAlbedo = *geoAlloc.AllocInstance!MatteMaterial( &texImgBrickWall );
-	
-	auto sph0 = MakeSphere( vec3( 0.0f, 0.0f, 0.0f ), 1.0f );
-	// auto prim0 = MakeSurfacePrim( sph0, &lambertRed );
-	auto prim0 = MakeSurfacePrim( sph0, &brickWallAlbedo );
-	
-	auto sph1 = MakeSphere( vec3( 0.0f, -601.0f, 0.0f ), 600.0f ); /// F_TODO:: Missing intersections at top of sphere once r >= 500
-	auto prim1 = MakeSurfacePrim( sph1, &lambertWhite );
+	IMaterial lambertRed       = *geoAlloc.AllocInstance!MatteMaterial( &texRed );
+	IMaterial lambertGreen     = *geoAlloc.AllocInstance!MatteMaterial( &texGreen );
+	IMaterial lambertBlue      = *geoAlloc.AllocInstance!MatteMaterial( &texBlue );
+	IMaterial lambertWhite     = *geoAlloc.AllocInstance!MatteMaterial( &texWhite ); 
+    IMaterial brickWallAlbedo  = *geoAlloc.AllocInstance!MatteMaterial( &texImgBrickWall );
 
-	import light;
+    
+    MakeSphereSurfacePrim( vec3( 0.0f ), 1.0f, &brickWallAlbedo );
+    MakeSphereSurfacePrim( vec3( 0.0f, -301.0f, 0.0f ), 300.0f, &lambertWhite );     /// Floor
+	MakeSphereSurfacePrim( vec3( -305.0f, 0.0f, 0.0f ), 300.0f, &lambertRed );       /// left wall
+	MakeSphereSurfacePrim( vec3( 305.0f, 0.0f, 0.0f ),  300.0f, &lambertBlue );      /// right wall
+	MakeSphereSurfacePrim( vec3( 0.0f, 0.0f, 308.0f ),  300.0f, &lambertGreen );     /// back wall
 	
+	// auto sph1 = MakeSphere( vec3( 0.0f, -601.0f, 0.0f ), 600.0f ); /// F_TODO:: Missing intersections at top of sphere once r >= 500
+	// auto prim1 = MakeSurfacePrim( sph1, &lambertWhite );
+
+	import light;	
     auto sph_lightGeo = MakeSphere( vec3( 0.0f, 10.0f, 0.0f ), 3.0f );
-	auto sph_light = cast(LightCommon*) geoAlloc.AllocInstance!DiffuseAreaLight( Spectrum(5.0f), sph_lightGeo, 10 /* num samples */ );
+	auto sph_light = cast(LightCommon*) geoAlloc.AllocInstance!DiffuseAreaLight( Spectrum(2.5f), sph_lightGeo, 10 /* num samples */ );
 	auto prim_light = cast(PrimCommon*) geoAlloc.AllocInstance!EmissiveSurfacePrim( sph_lightGeo, nullMtl, sph_light );
-	
-	import datastructures;
-	auto primBuffer = BufferT!( PrimCommon*, 512 )();
-	primBuffer.Push( prim0 );
-	primBuffer.Push( prim1 );
 	primBuffer.Push( prim_light );
+	
+	// primBuffer.Push( prim0 );
+	// primBuffer.Push( prim1 );
 
-	PrimArray primList = PrimArray( primBuffer.range() );
+	const ulong numPrims = primBuffer.GetCount();
+	PrimArray primList = PrimArray( primBuffer[0..numPrims] );
     Scene scene = Scene( primList, [ sph_light ] );       
 	
     Camera renderCam;
@@ -224,19 +239,20 @@ void main( string[] args)
             if ( e.type == SDL_QUIT )
             {
                 quit = true;
+                break;
             }
 
-            if ( !renderHasConverged )
-            {
-                // writeln("Performing Render Progression # ", numProgressions, "" );
-				write("Performing render progression ", numProgressions+1, "\r");
+            // if ( !renderHasConverged )
+            // {
+            //     // writeln("Performing Render Progression # ", numProgressions, "" );
+			// 	write("Performing render progression ", numProgressions+1, "\r");
 
-                renderHasConverged = integrator.RenderProgression( &scene );
-                ++numProgressions;
+            //     renderHasConverged = integrator.RenderProgression( &scene );
+            //     ++numProgressions;
 				
-                tonemap();
-                updateSdlDisplayBuffer();
-            }
+            //     tonemap();
+            //     updateSdlDisplayBuffer();
+            // }
 
 
             // TODO:: Hook up keys to drive things like exposure values for tonemapping
@@ -248,6 +264,19 @@ void main( string[] args)
             //     quit = true;
             // }
         }
+        
+        if ( !renderHasConverged )
+        {
+            // writeln("Performing Render Progression # ", numProgressions, "" );
+            write("Performing render progression ", numProgressions+1, "\r");
+
+            renderHasConverged = integrator.RenderProgression( &scene );
+            ++numProgressions;
+            
+            tonemap();
+            updateSdlDisplayBuffer();
+        }
+
 	}
 
 	writeln("\nRender is finished!\n");
