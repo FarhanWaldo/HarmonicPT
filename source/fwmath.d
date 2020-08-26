@@ -1,38 +1,5 @@
 import std.math;
 
-// Emit an actual FMA instruction... damn you, Phobos
-//
-version(none){
-// F_TODO:: fw_fma won't get inlined, it's better to use a compiler intrinsic for this rather than inline asm
-//          Look into using LDC, which inserts a compiler intrinsic when using std.math.fma
-
-/**
-    Returns the value of a*b + c, evaluated with an FMA instruction
-    vfmadd231sd (double precision)
-*/
-pragma(inline)
-double fw_fma( double a, double b, double c ) @safe pure @nogc nothrow {
-	asm @safe pure @nogc nothrow {
-		naked;
-		vfmadd231sd XMM0, XMM1, XMM2;
-		ret;
-	}
-}
-
-/**
-    Returns the value of a*b + c, evaluated with an FMA instruction
-    vfmadd231ss (single precision)
-*/
-pragma(inline)
-float fw_fma( float a, float b, float c ) @safe pure @nogc nothrow {
-	asm @safe pure @nogc nothrow {
-		naked;
-		vfmadd231ss XMM0, XMM1, XMM2;
-		ret;
-	}
-}
-}
-
 version( LDC )
 {
     /// LDC has an llvm intrinsic for using the actual fma instructions (if available on target compilation machine)

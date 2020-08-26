@@ -31,7 +31,9 @@ void main( string[] args)
 
     uint imageWidth 	= 640;
     uint imageHeight 	= 480;
-
+    // uint imageWidth = 1920;
+	// uint imageHeight = 1080;
+	
     int tileSize = 64;
     float* pImageBufferData;
 	ubyte* pDisplayBufferData;
@@ -198,20 +200,17 @@ void main( string[] args)
     MakeSphereSurfacePrim( vec3( 0.0f, -301.0f, 0.0f ), 300.0f, &lambertWhite );     /// Floor
 	MakeSphereSurfacePrim( vec3( -305.0f, 0.0f, 0.0f ), 300.0f, &lambertRed );       /// left wall
 	MakeSphereSurfacePrim( vec3( 305.0f, 0.0f, 0.0f ),  300.0f, &lambertBlue );      /// right wall
-	MakeSphereSurfacePrim( vec3( 0.0f, 0.0f, 308.0f ),  300.0f, &lambertGreen );     /// back wall
+	MakeSphereSurfacePrim( vec3( 0.0f, 0.0f, 308.0f ),  300.0f, &lambertWhite );     /// back wall
 	
 	// auto sph1 = MakeSphere( vec3( 0.0f, -601.0f, 0.0f ), 600.0f ); /// F_TODO:: Missing intersections at top of sphere once r >= 500
 	// auto prim1 = MakeSurfacePrim( sph1, &lambertWhite );
 
 	import light;	
     auto sph_lightGeo = MakeSphere( vec3( 0.0f, 10.0f, 0.0f ), 3.0f );
-	auto sph_light = cast(LightCommon*) geoAlloc.AllocInstance!DiffuseAreaLight( Spectrum(2.5f), sph_lightGeo, 10 /* num samples */ );
+	auto sph_light = cast(LightCommon*) geoAlloc.AllocInstance!DiffuseAreaLight( Spectrum(3.0f), sph_lightGeo, 10 /* num samples */ );
 	auto prim_light = cast(PrimCommon*) geoAlloc.AllocInstance!EmissiveSurfacePrim( sph_lightGeo, nullMtl, sph_light );
 	primBuffer.Push( prim_light );
 	
-	// primBuffer.Push( prim0 );
-	// primBuffer.Push( prim1 );
-
 	const ulong numPrims = primBuffer.GetCount();
 	PrimArray primList = PrimArray( primBuffer[0..numPrims] );
     Scene scene = Scene( primList, [ sph_light ] );       
@@ -269,6 +268,5 @@ void main( string[] args)
 	}
 
 	writeln("\nRender is finished!\n");
-
     ImageBuffer_WriteToPng( &displayImage, cast(char*) "render.png" );
 }

@@ -12,6 +12,33 @@ import sampling;
 import spectrum;
 import interactions;
 
+
+struct FilmTile
+{
+    uint m_topLeftX;
+	uint m_topLeftY;
+
+	uint m_tileWidth;
+	uint m_tileHeight;
+
+	uint m_imgWidth;
+	uint m_imgHeight;
+
+
+    this( uint topLeftX, uint topLeftY,
+		  uint tileWidth, uint tileHeight,
+		  uint imgWidth, uint imgHeight )
+	{
+		m_topLeftX     = topLeftX;
+		m_topLeftY     = topLeftY;
+		m_tileWidth    = tileWidth;
+		m_tileHeight   = tileHeight;
+		m_imgWidth     = imgWidth;
+		m_imgHeight    = imgHeight;
+	}
+}
+
+
 interface IIntegrator
 {
     void Init( in Scene* scene,  IMemAlloc* memArena );
@@ -37,6 +64,7 @@ class SamplerIntegrator : IIntegrator
 	const uint      m_numThreads;
 	const ulong     m_perThreadArenaSizeBytes;
     BaseMemAlloc[]  m_perThreadArena;
+	BaseSampler[]   m_perThreadSampler;
 	
 
     this( BaseSampler* sampler,
@@ -59,10 +87,20 @@ class SamplerIntegrator : IIntegrator
     override void
     Init( in Scene* scene, IMemAlloc* memArena )
     {
+		/// Set up per thread memory arenas
+		///
 		const auto memSize = m_perThreadArenaSizeBytes;
 		foreach( i; 0..m_numThreads )
 		{
 			m_perThreadArena ~= new StackAlloc( memArena.Allocate(memSize) );
+		}
+
+		/// Set up per thread samplers
+		///
+		import std.random;
+		foreach( i; 0..m_numThreads )
+		{
+		    m_perThreadSampler ~= m_sampler.Clone( unpredictableSeed() );
 		}
     }
 
@@ -74,45 +112,65 @@ class SamplerIntegrator : IIntegrator
         const vec2 cameraDims  = vec2( cast(float) imageWidth, cast(float) imageHeight );
 
         float[] renderBuffer = m_renderBuffer.m_pixelData;
-		
-        // TODO:: Have pixel filtering
-        //
-		const ulong numPixels = imageHeight * imageWidth;
-		import std.range : iota;
 
-		/// TODO:: Having the taskpool work on tiles (generic 2D intervals) of the image is a more robust strategy
-		///
-		auto pixelIter = iota( numPixels );
-		foreach (pixelIndex; taskPool.parallel( pixelIter ))
+		FilmTile[] imageTiles;
+		const uint tileSizeX = 64;
+		const uint tileSizeY = 64;
+
+		const uint numTilesX = imageWidth/tileSizeX;
+		const uint numTilesY = imageHeight/tileSizeY;
+
+		foreach ( tileId_y; 0..numTilesY+1 ) {
+			foreach ( tileId_x; 0..numTilesX ) {
+				const uint topLeftX = Min( tileId_x*tileSizeX, imageWidth - 1 );
+				const uint topLeftY = Min( tileId_y*tileSizeY, imageHeight -1 );
+
+				const uint width = Min( tileSizeX, imageWidth - topLeftX );
+				const uint height = Min( tileSizeY, imageHeight - topLeftY );
+
+				imageTiles ~= FilmTile( topLeftX, topLeftY, width, height, imageWidth, imageHeight ); 
+			}
+		}
+
+		import std.stdio;
+		ulong tilesPerThread = imageTiles.length/m_numThreads;
+		foreach (taskCounter, ref tile; taskPool.parallel( imageTiles, tilesPerThread ))
 		{
-			const ulong j = pixelIndex / imageWidth; // current row
-			const ulong i = pixelIndex - j*imageWidth; // current column
-
 			const auto threadId = taskPool.workerIndex;
 
-			Spectrum pixelColour = Spectrum(0.0);
+			foreach (y; 0..tile.m_tileHeight ) {
+				foreach( x; 0..tile.m_tileWidth ) {
 
-			foreach ( progression; 0 .. numProgressions )
-			{
-				const vec2 pixelPos = vec2( cast(float) i, cast(float) j );
-				const vec2 jitteredPos = pixelPos + m_sampler.Get2D();
+					const ulong pixelIndex = (tile.m_topLeftY + y)*imageWidth + tile.m_topLeftX + x;
 
-				Ray cameraRay;
-				m_camera.SpawnRay( jitteredPos, cameraDims, cameraRay );
+					const ulong j = pixelIndex / imageWidth; // current row
+					const ulong i = pixelIndex - j*imageWidth; // current column
 
-				pixelColour += Irradiance( cameraRay, scene, m_sampler, &m_perThreadArena[threadId] );
+					Spectrum pixelColour = Spectrum(0.0);
+					foreach ( progression; 0 .. numProgressions )
+					{
+						const vec2 pixelPos = vec2( cast(float) i, cast(float) j );
+						const vec2 jitteredPos = pixelPos + m_sampler.Get2D();
 
-				m_perThreadArena[threadId].Reset();
+						Ray cameraRay;
+						m_camera.SpawnRay( jitteredPos, cameraDims, cameraRay );
+
+						pixelColour += Irradiance( cameraRay, scene, &m_perThreadSampler[threadId] , &m_perThreadArena[threadId] );
+
+						m_perThreadArena[threadId].Reset();
+					}
+
+					const float ir = pixelColour.r;
+					const float ig = pixelColour.g;
+					const float ib = pixelColour.b;
+
+					const ulong baseIndex            = pixelIndex * 3;
+					renderBuffer[ baseIndex ]       += ir;
+					renderBuffer[ baseIndex + 1 ]   += ig;
+					renderBuffer[ baseIndex + 2 ]   += ib;
+
+				}
 			}
-
-			const float ir = pixelColour.r;
-			const float ig = pixelColour.g;
-			const float ib = pixelColour.b;
-
-			const ulong baseIndex            = pixelIndex * 3;
-			renderBuffer[ baseIndex ]       += ir;
-			renderBuffer[ baseIndex + 1 ]   += ig;
-			renderBuffer[ baseIndex + 2 ]   += ib;
 		}
 
 		m_finishedProgressions += numProgressions;
@@ -248,6 +306,7 @@ class PathTracingIntegrator : SamplerIntegrator
 			///
 			if ( !surfIntx.m_bsdf )
 			{
+    			/// F_TODO:: CHeck if this is a light, if so, return, and renable the commented code below
 				break;
 			    // ray = surfIntx.CreateRay( ray.m_dir );
 				// bounce--;
@@ -274,10 +333,14 @@ class PathTracingIntegrator : SamplerIntegrator
 			/// TRANSMISSION HACK
 			/// bool transmission bounce
 
+			///  Update throughput of the path for the next bounce
+			///
 			throughput = throughput*F*Abs( v_dot(wi,surfIntx.m_shading.n) )/pdf;
 
 			ray = surfIntx.CreateRay( wi );
 
+			/// Employ russian roulette after the 4th bounce
+			///
 			if ( bounce > 4 )
 			{
 			    const float p = (throughput.x + throughput.y + throughput.z) / 3.0f;
