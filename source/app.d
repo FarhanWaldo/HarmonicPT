@@ -127,27 +127,29 @@ void main( string[] args)
     bool        renderHasConverged = false;
 
     void tonemap() {
-		import std.math : pow;
 		
-		float invNumProgressions = 1.0f/(cast(float) numProgressions);
-        //	Create LDR display buffer from HDR render buffer
-        //
-        foreach ( uint row; 0..imageHeight )
-        {
-            foreach ( uint col; 0..imageWidth )
-            {
-                const uint pixelIndex = 3 * ( row * imageWidth + col );
+		import std.math : pow;
+		import std.range : iota;
+		import std.parallelism;
+		
+		//	Create LDR display buffer from HDR render buffer
+		//
+		const float invNumProgressions = 1.0f/(cast(float) numProgressions);
 
-				ubyte floatToUbyte( float v ) {
-					return cast(ubyte) Min( 255, 255.0f*pow( invNumProgressions*v/whitepoint, 2.2f ));
-				}
+	    auto pixelIter = iota( imageWidth*imageHeight );
+		foreach( i; taskPool.parallel(pixelIter) )
+		{
+			const uint pixelIndex = i*3;
 
-				pDisplayBufferData[ pixelIndex ]   = floatToUbyte( pImageBufferData[ pixelIndex ] );
-				pDisplayBufferData[ pixelIndex+1 ] = floatToUbyte( pImageBufferData[ pixelIndex+1 ] );
-				pDisplayBufferData[ pixelIndex+2 ] = floatToUbyte( pImageBufferData[ pixelIndex+2 ] );				
-            }
-        }
-    }
+			ubyte floatToUbyte( float v ) {
+				return cast(ubyte) Min( 255, 255.0f*pow( invNumProgressions*v/whitepoint, 2.2f ));
+			}
+
+			pDisplayBufferData[ pixelIndex ]   = floatToUbyte( pImageBufferData[ pixelIndex ] );
+			pDisplayBufferData[ pixelIndex+1 ] = floatToUbyte( pImageBufferData[ pixelIndex+1 ] );
+			pDisplayBufferData[ pixelIndex+2 ] = floatToUbyte( pImageBufferData[ pixelIndex+2 ] );				
+		}
+}
 
     void updateSdlDisplayBuffer() {
         SDL_BlitSurface( renderSurface, null, gScreenSurface, null );
@@ -241,19 +243,6 @@ void main( string[] args)
                 quit = true;
                 break;
             }
-
-            // if ( !renderHasConverged )
-            // {
-            //     // writeln("Performing Render Progression # ", numProgressions, "" );
-			// 	write("Performing render progression ", numProgressions+1, "\r");
-
-            //     renderHasConverged = integrator.RenderProgression( &scene );
-            //     ++numProgressions;
-				
-            //     tonemap();
-            //     updateSdlDisplayBuffer();
-            // }
-
 
             // TODO:: Hook up keys to drive things like exposure values for tonemapping
             //
