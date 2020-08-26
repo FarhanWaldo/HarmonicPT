@@ -12,6 +12,38 @@ import sampling;
 import spectrum;
 import interactions;
 
+
+struct FilmTile
+{
+    uint m_topLeftX;
+	uint m_topLeftY;
+
+	uint m_tileWidth;
+	uint m_tileHeight;
+
+	uint m_imgWidth;
+	uint m_imgHeight;
+
+	///  Image render buffer (full image, need to be careful when indexing)
+	///
+    float* m_imageBuffer;
+
+    this( uint topLeftX, uint topLeftY,
+		  uint tileWidth, uint tileHeight,
+		  uint imgWidth, uint imgHeight,
+		  float* imageBuffer )
+	{
+		m_topLeftX     = topLeftX;
+		m_topLeftY     = topLeftY;
+		m_tileWidth    = tileWidth;
+		m_tileHeight   = tileHeight;
+		m_imgWidth     = imgWidth;
+		m_imgHeight    = imgHeight;
+		m_imageBuffer  =  imageBuffer;
+	}
+}
+
+
 interface IIntegrator
 {
     void Init( in Scene* scene,  IMemAlloc* memArena );
@@ -73,7 +105,7 @@ class SamplerIntegrator : IIntegrator
 		import std.random;
 		foreach( i; 0..m_numThreads )
 		{
-		    m_perThreadSampler ~= m_sampler.Clone( unpredictableSeed()  );
+		    m_perThreadSampler ~= m_sampler.Clone( unpredictableSeed() );
 		}
     }
 
@@ -85,44 +117,48 @@ class SamplerIntegrator : IIntegrator
         const vec2 cameraDims  = vec2( cast(float) imageWidth, cast(float) imageHeight );
 
         float[] renderBuffer = m_renderBuffer.m_pixelData;
-		
-        // TODO:: Have pixel filtering
-        //
-		const ulong numPixels = imageHeight * imageWidth;
-		import std.range : iota;
 
-		/// TODO:: Having the taskpool work on tiles (generic 2D intervals) of the image is a more robust strategy
-		///
-		auto pixelIter = iota( numPixels );
-		foreach (pixelIndex; taskPool.parallel( pixelIter ))
-		{
-			const ulong j = pixelIndex / imageWidth; // current row
-			const ulong i = pixelIndex - j*imageWidth; // current column
+		version(none) {
+			// TODO:: Have pixel filtering
+			//
+			const ulong numPixels = imageHeight * imageWidth;
+			import std.range : iota;
 
-			const auto threadId = taskPool.workerIndex;
-
-			Spectrum pixelColour = Spectrum(0.0);
-			foreach ( progression; 0 .. numProgressions )
+			/// TODO:: Having the taskpool work on tiles (generic 2D intervals) of the image is a more robust strategy
+			///
+			auto pixelIter = iota( numPixels );
+			foreach (pixelIndex; taskPool.parallel( pixelIter ))
 			{
-				const vec2 pixelPos = vec2( cast(float) i, cast(float) j );
-				const vec2 jitteredPos = pixelPos + m_sampler.Get2D();
+				const ulong j = pixelIndex / imageWidth; // current row
+				const ulong i = pixelIndex - j*imageWidth; // current column
 
-				Ray cameraRay;
-				m_camera.SpawnRay( jitteredPos, cameraDims, cameraRay );
+				const auto threadId = taskPool.workerIndex;
 
-				pixelColour += Irradiance( cameraRay, scene, &m_perThreadSampler[threadId] , &m_perThreadArena[threadId] );
+				Spectrum pixelColour = Spectrum(0.0);
+				foreach ( progression; 0 .. numProgressions )
+				{
+					const vec2 pixelPos = vec2( cast(float) i, cast(float) j );
+					const vec2 jitteredPos = pixelPos + m_sampler.Get2D();
 
-				m_perThreadArena[threadId].Reset();
+					Ray cameraRay;
+					m_camera.SpawnRay( jitteredPos, cameraDims, cameraRay );
+
+					pixelColour += Irradiance( cameraRay, scene, &m_perThreadSampler[threadId] , &m_perThreadArena[threadId] );
+
+					m_perThreadArena[threadId].Reset();
+				}
+
+				const float ir = pixelColour.r;
+				const float ig = pixelColour.g;
+				const float ib = pixelColour.b;
+
+				const ulong baseIndex            = pixelIndex * 3;
+				renderBuffer[ baseIndex ]       += ir;
+				renderBuffer[ baseIndex + 1 ]   += ig;
+				renderBuffer[ baseIndex + 2 ]   += ib;
 			}
-
-			const float ir = pixelColour.r;
-			const float ig = pixelColour.g;
-			const float ib = pixelColour.b;
-
-			const ulong baseIndex            = pixelIndex * 3;
-			renderBuffer[ baseIndex ]       += ir;
-			renderBuffer[ baseIndex + 1 ]   += ig;
-			renderBuffer[ baseIndex + 2 ]   += ib;
+		} else {
+		
 		}
 
 		m_finishedProgressions += numProgressions;
@@ -258,6 +294,7 @@ class PathTracingIntegrator : SamplerIntegrator
 			///
 			if ( !surfIntx.m_bsdf )
 			{
+    			/// F_TODO:: CHeck if this is a light, if so, return, and renable the commented code below
 				break;
 			    // ray = surfIntx.CreateRay( ray.m_dir );
 				// bounce--;
