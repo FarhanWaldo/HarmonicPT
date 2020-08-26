@@ -37,6 +37,7 @@ class SamplerIntegrator : IIntegrator
 	const uint      m_numThreads;
 	const ulong     m_perThreadArenaSizeBytes;
     BaseMemAlloc[]  m_perThreadArena;
+	BaseSampler[]   m_perThreadSampler;
 	
 
     this( BaseSampler* sampler,
@@ -59,10 +60,20 @@ class SamplerIntegrator : IIntegrator
     override void
     Init( in Scene* scene, IMemAlloc* memArena )
     {
+		/// Set up per thread memory arenas
+		///
 		const auto memSize = m_perThreadArenaSizeBytes;
 		foreach( i; 0..m_numThreads )
 		{
 			m_perThreadArena ~= new StackAlloc( memArena.Allocate(memSize) );
+		}
+
+		/// Set up per thread samplers
+		///
+		import std.random;
+		foreach( i; 0..m_numThreads )
+		{
+		    m_perThreadSampler ~= m_sampler.Clone( unpredictableSeed()  );
 		}
     }
 
@@ -91,7 +102,6 @@ class SamplerIntegrator : IIntegrator
 			const auto threadId = taskPool.workerIndex;
 
 			Spectrum pixelColour = Spectrum(0.0);
-
 			foreach ( progression; 0 .. numProgressions )
 			{
 				const vec2 pixelPos = vec2( cast(float) i, cast(float) j );
@@ -100,7 +110,7 @@ class SamplerIntegrator : IIntegrator
 				Ray cameraRay;
 				m_camera.SpawnRay( jitteredPos, cameraDims, cameraRay );
 
-				pixelColour += Irradiance( cameraRay, scene, m_sampler, &m_perThreadArena[threadId] );
+				pixelColour += Irradiance( cameraRay, scene, &m_perThreadSampler[threadId] , &m_perThreadArena[threadId] );
 
 				m_perThreadArena[threadId].Reset();
 			}
@@ -274,10 +284,14 @@ class PathTracingIntegrator : SamplerIntegrator
 			/// TRANSMISSION HACK
 			/// bool transmission bounce
 
+			///  Update throughput of the path for the next bounce
+			///
 			throughput = throughput*F*Abs( v_dot(wi,surfIntx.m_shading.n) )/pdf;
 
 			ray = surfIntx.CreateRay( wi );
 
+			/// Employ russian roulette after the 4th bounce
+			///
 			if ( bounce > 4 )
 			{
 			    const float p = (throughput.x + throughput.y + throughput.z) / 3.0f;

@@ -138,7 +138,7 @@ abstract class BaseSampler
 		m_2DSamplesArray ~= new vec2[ n * m_samplesPerPixel ];
     }
 
-    BaseSampler* Clone( int seed );
+    BaseSampler Clone( int seed );
 
     float[] Get1DArray( int index )
     {
@@ -220,9 +220,9 @@ class PixelSampler : BaseSampler
         }
     }
 
-    override BaseSampler* Clone( int seed )
+    override BaseSampler Clone( int seed )
     {
-        return null;
+        return new PixelSampler( m_samplesPerPixel, m_numSampledDimensions, seed );
     }
 
     override bool StartNextSample()
