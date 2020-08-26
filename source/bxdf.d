@@ -278,3 +278,83 @@ class LambertBrdf : BaseBxDF
 	}
 }
 
+
+interface IFresnel
+{
+	pure @nogc const nothrow
+	Spectrum Evaluate( float cosIncidence );
+}
+
+class FresnelConstant : IFresnel
+{
+	pure @nogc const nothrow override
+	Spectrum Evaluate( float cosIncidence )
+	{
+        return Spectrum( 1.0f );
+	}
+}
+
+class FresnelDielectric : IFresnel
+{
+    float m_etaI;  /// index of refraction in incident medium
+	float m_etaT;  /// index of refraction in transmitted medium
+
+    pure @nogc const nothrow
+	this( float etaIncident, float etaTransmitted )
+	{
+		m_etaI = etaIncident;
+		m_etaT = etaTransmitted;
+	}
+	
+	pure @nogc const nothrow override
+	Spectrum Evaluate( float cosIncidence )
+	{
+		return Spectrum( Fresnel_Dielectric( cosIncidence, m_etaI, m_etaT ) );
+	}
+}
+
+/**
+  Computes the Fresnel response for dielectric materials given:
+  Params:
+      cosThetaI   = cosine of incidence angle (theta)
+      etaI        = index of refraction for incident medium
+      etaT        = index of refraction for transmitted medium
+
+  Returns: a normalised float, [0.0, 1.0], that gives the ratio of light 
+      that is reflected vs transmitted
+*/
+pure @nogc @safe nothrow
+float Fresnel_Dielectric( float cosThetaI, float etaI, float etaT )
+{
+    cosThetaI = Clamp( cosThetaI, -1.0f, 1.0f );
+    bool entering = cosThetaI > 0.0f;
+    if ( !entering )
+    {
+        Swap( etaI, etaT );
+        cosThetaI = Abs( cosThetaI );
+    }
+
+    float sinThetaI = SafeSqrt( 1.0f - cosThetaI*cosThetaI );
+    float sinThetaT = ( etaI / etaT ) * sinThetaI;
+
+    if ( sinThetaT >= 1.0f )
+    {
+        return 1;
+    }
+
+    // float cosThetaT = sqrt( _MAX( 0.f, 1.0f - sinThetaT*sinThetaT ) );
+    float cosThetaT = SafeSqrt( 1.0f - sinThetaT*sinThetaT );
+
+    float rParallel =   ( ( etaT*cosThetaI ) - ( etaI*cosThetaT ) ) /
+                        ( ( etaT*cosThetaI ) + ( etaI*cosThetaT ) );
+
+    float rPerpendincular = ( ( etaI*cosThetaI ) - ( etaT*cosThetaT ) ) /
+                            ( ( etaI*cosThetaI ) + ( etaT*cosThetaT ) );
+
+    return 0.5f*( rParallel*rParallel + rPerpendincular*rPerpendincular );
+}
+
+/// F_TODO:: Add Fresnel Conductor
+///
+
+
