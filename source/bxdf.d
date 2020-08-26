@@ -314,14 +314,13 @@ class FresnelDielectric : IFresnel
 }
 
 /**
-  Computes the Fresnel response for dielectric materials given:
+  Computes the Fresnel response for unpolarised light scattering on a dielectric surface boundary
   Params:
       cosThetaI   = cosine of incidence angle (theta)
       etaI        = index of refraction for incident medium
       etaT        = index of refraction for transmitted medium
 
-  Returns: a normalised float, [0.0, 1.0], that gives the ratio of light 
-      that is reflected vs transmitted
+  Returns: a normalised float, [0.0, 1.0], that gives the percentage of light that is reflected
 */
 pure @nogc @safe nothrow
 float Fresnel_Dielectric( float cosThetaI, float etaI, float etaT )
@@ -342,7 +341,6 @@ float Fresnel_Dielectric( float cosThetaI, float etaI, float etaT )
         return 1;
     }
 
-    // float cosThetaT = sqrt( _MAX( 0.f, 1.0f - sinThetaT*sinThetaT ) );
     float cosThetaT = SafeSqrt( 1.0f - sinThetaT*sinThetaT );
 
     float rParallel =   ( ( etaT*cosThetaI ) - ( etaI*cosThetaT ) ) /
@@ -352,6 +350,55 @@ float Fresnel_Dielectric( float cosThetaI, float etaI, float etaT )
                             ( ( etaI*cosThetaI ) + ( etaT*cosThetaT ) );
 
     return 0.5f*( rParallel*rParallel + rPerpendincular*rPerpendincular );
+}
+
+class SpecularReflection : BaseBxDF
+{
+	const Spectrum  m_R;
+	const IFresnel* m_fresnel;
+
+	this( Spectrum tint, IFresnel* fresnel )
+	{
+		super( BxDFType_Reflection | BxDFType_Specular );
+		m_R         = tint;
+		m_fresnel   = fresnel;
+	}
+
+	/**
+        Evaluate the BxDF for a given outgoing and incident lighting direction
+        Params:
+            wo = outgoing direction
+            wi = incident lighting direction
+        Returns:
+            The ratio of reflected irradiance heading towards wo
+    */
+	override pure const @safe @nogc nothrow
+	Spectrum F( in vec3 wo, in vec3 wi )
+	{
+	    return m_R*INV_PI;
+	}
+
+	/**
+        Compute the Hemispherical-Directional reflectance on the surface in the direction wo
+        The integral of the BDRF toward wo over the hemisphere of incoming directions
+    */
+	override pure const @safe @nogc nothrow
+    Spectrum Rho( in vec3 wo, in vec2[] samples )
+	{
+	    return Spectrum(0.0f);
+	}
+
+	/**
+        Compute the average Hemispherical-Hemispherical reflection on the surface.
+        The same as the Hemispheriecal-Directional reflectance, but averaged over the hemisphere
+          of outgoing directions.
+    */
+	override pure const @safe @nogc nothrow
+    Spectrum Rho( in vec2[] samples1, in vec2[] samples2 )
+	{
+        return m_R;
+	}
+
 }
 
 /// F_TODO:: Add Fresnel Conductor
