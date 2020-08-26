@@ -24,14 +24,10 @@ struct FilmTile
 	uint m_imgWidth;
 	uint m_imgHeight;
 
-	///  Image render buffer (full image, need to be careful when indexing)
-	///
-    float* m_imageBuffer;
 
     this( uint topLeftX, uint topLeftY,
 		  uint tileWidth, uint tileHeight,
-		  uint imgWidth, uint imgHeight,
-		  float* imageBuffer )
+		  uint imgWidth, uint imgHeight )
 	{
 		m_topLeftX     = topLeftX;
 		m_topLeftY     = topLeftY;
@@ -39,7 +35,6 @@ struct FilmTile
 		m_tileHeight   = tileHeight;
 		m_imgWidth     = imgWidth;
 		m_imgHeight    = imgHeight;
-		m_imageBuffer  =  imageBuffer;
 	}
 }
 
@@ -158,6 +153,66 @@ class SamplerIntegrator : IIntegrator
 				renderBuffer[ baseIndex + 2 ]   += ib;
 			}
 		} else {
+
+		    FilmTile[] imageTiles;
+			const uint tileSizeX = 64;
+			const uint tileSizeY = 64;
+
+			const uint numTilesX = imageWidth/tileSizeX;
+			const uint numTilesY = imageHeight/tileSizeY;
+
+			foreach ( tileId_y; 0..numTilesY+1 ) {
+			    foreach ( tileId_x; 0..numTilesX ) {
+				    const uint topLeftX = Min( tileId_x*tileSizeX, imageWidth - 1 );
+					const uint topLeftY = Min( tileId_y*tileSizeY, imageHeight -1 );
+
+					const uint width = Min( tileSizeX, imageWidth - topLeftX );
+					const uint height = Min( tileSizeY, imageHeight - topLeftY );
+
+					imageTiles ~= FilmTile( topLeftX, topLeftY, width, height, imageWidth, imageHeight ); 
+				}
+			}
+
+		    import std.stdio;
+			ulong tilesPerThread = imageTiles.length/m_numThreads;
+			foreach (taskCounter, ref tile; taskPool.parallel( imageTiles, tilesPerThread ))
+			{
+			    const auto threadId = taskPool.workerIndex;
+
+				foreach (y; 0..tile.m_tileHeight ) {
+				    foreach( x; 0..tile.m_tileWidth ) {
+					
+					    const ulong pixelIndex = (tile.m_topLeftY + y)*imageWidth + tile.m_topLeftX + x;
+
+						const ulong j = pixelIndex / imageWidth; // current row
+						const ulong i = pixelIndex - j*imageWidth; // current column
+
+						Spectrum pixelColour = Spectrum(0.0);
+						foreach ( progression; 0 .. numProgressions )
+						{
+							const vec2 pixelPos = vec2( cast(float) i, cast(float) j );
+							const vec2 jitteredPos = pixelPos + m_sampler.Get2D();
+
+							Ray cameraRay;
+							m_camera.SpawnRay( jitteredPos, cameraDims, cameraRay );
+
+							pixelColour += Irradiance( cameraRay, scene, &m_perThreadSampler[threadId] , &m_perThreadArena[threadId] );
+
+							m_perThreadArena[threadId].Reset();
+						}
+
+						const float ir = pixelColour.r;
+						const float ig = pixelColour.g;
+						const float ib = pixelColour.b;
+
+						const ulong baseIndex            = pixelIndex * 3;
+						renderBuffer[ baseIndex ]       += ir;
+						renderBuffer[ baseIndex + 1 ]   += ig;
+						renderBuffer[ baseIndex + 2 ]   += ib;
+	
+					}
+				}
+			}
 		
 		}
 
