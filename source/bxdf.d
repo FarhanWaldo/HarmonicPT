@@ -128,6 +128,81 @@ vec3 FaceForward( in vec3 v, in vec3 n ) {
     return ( v_dot( v, n ) >= 0.0f ) ? n : -1.0f*n;
 }
 
+///
+///  Fresnel implementation
+///
+interface IFresnel
+{
+	pure @nogc const nothrow
+	Spectrum Evaluate( float cosIncidence );
+}
+
+class FresnelConstant : IFresnel
+{
+	pure @nogc const nothrow override
+	Spectrum Evaluate( float cosIncidence )
+	{
+        return Spectrum( 1.0f );
+	}
+}
+
+class FresnelDielectric : IFresnel
+{
+    float m_etaI;  /// index of refraction in incident medium
+	float m_etaT;  /// index of refraction in transmitted medium
+
+    pure @nogc const nothrow
+	this( float etaIncident, float etaTransmitted )
+	{
+		m_etaI = etaIncident;
+		m_etaT = etaTransmitted;
+	}
+	
+	pure @nogc const nothrow override
+	Spectrum Evaluate( float cosIncidence )
+	{
+		return Spectrum( Fresnel_Dielectric( cosIncidence, m_etaI, m_etaT ) );
+	}
+}
+
+/**
+  Computes the Fresnel response for unpolarised light scattering on a dielectric surface boundary
+  Params:
+      cosThetaI   = cosine of incidence angle (theta)
+      etaI        = index of refraction for incident medium
+      etaT        = index of refraction for transmitted medium
+
+  Returns: a normalised float, [0.0, 1.0], that gives the percentage of light that is reflected
+*/
+pure @nogc @safe nothrow
+float Fresnel_Dielectric( float cosThetaI, float etaI, float etaT )
+{
+    cosThetaI = Clamp( cosThetaI, -1.0f, 1.0f );
+    bool entering = cosThetaI > 0.0f;
+    if ( !entering )
+    {
+        Swap( etaI, etaT );
+        cosThetaI = Abs( cosThetaI );
+    }
+
+    float sinThetaI = SafeSqrt( 1.0f - cosThetaI*cosThetaI );
+    float sinThetaT = ( etaI / etaT ) * sinThetaI;
+
+    if ( sinThetaT >= 1.0f )
+    {
+        return 1;
+    }
+
+    float cosThetaT = SafeSqrt( 1.0f - sinThetaT*sinThetaT );
+
+    float rParallel =   ( ( etaT*cosThetaI ) - ( etaI*cosThetaT ) ) /
+                        ( ( etaT*cosThetaI ) + ( etaI*cosThetaT ) );
+
+    float rPerpendincular = ( ( etaI*cosThetaI ) - ( etaT*cosThetaT ) ) /
+                            ( ( etaI*cosThetaI ) + ( etaT*cosThetaT ) );
+
+    return 0.5f*( rParallel*rParallel + rPerpendincular*rPerpendincular );
+}
 
 //
 //  Defines the abstract base class for BRDFs and BTDFs
@@ -277,4 +352,98 @@ class LambertBrdf : BaseBxDF
         return m_R;
 	}
 }
+
+
+class SpecularReflection : BaseBxDF
+{
+	const Spectrum  m_R;
+	const IFresnel* m_fresnel;
+
+	this( Spectrum tint, IFresnel* fresnel )
+	{
+		super( BxDFType_Reflection | BxDFType_Specular );
+		m_R         = tint;
+		m_fresnel   = fresnel;
+	}
+
+	/**
+        Evaluate the BxDF for a given outgoing and incident lighting direction.
+        Since this represents a specular scattering event, we make F() return 0 for an arbitrary incidence and exitant angle        
+
+        Params:
+            wo = outgoing direction
+            wi = incident lighting direction
+        Returns:
+            Returns an empty spectrum
+    */
+	override pure const @safe @nogc nothrow
+	Spectrum F( in vec3 wo, in vec3 wi )
+	{
+	    return Spectrum(0.0f);
+	}
+
+	/**
+        Returns the PDF value for a pair of incoming and outgoing directions. Since this is a specular event,
+        its PDF is technically described by a dirac delta function, and we'll be returning 0 for the PDF method.
+        Specular lobes must be used by Sample_F()
+    */
+	override pure const @safe @nogc nothrow
+	float Pdf( in vec3 wo, in vec3 wi )
+	{
+	    return 0.0f;
+	}
+	
+    /**
+        Generates a sampling direction (o_wi) and PDF (o_pdf) given a random sample u (2D uniform random number)
+
+        Specular Reflection can only generate a single event when sampling, in the only direction where the PDF is non-zero
+
+        Always assigns 1.0f to the pdf
+    */
+	override pure const @trusted @nogc nothrow
+    Spectrum Sample_F(
+	    in vec3     wo,    
+		in vec2     u,
+		ref vec3    o_wi,
+	    float*      o_pdf,
+		BxDFType*   o_sampledType = null )
+	{
+		o_wi = vec3( -1.0f*wo.x, -1.0f*wo.y, wo.z );
+		*o_pdf = 1.0f; /// Delta distribution
+
+		if ( o_sampledType )
+		{
+		    *o_sampledType = BxDFType_Specular | BxDFType_Reflection;
+		}
+
+		return m_fresnel.Evaluate(CosTheta(o_wi)) * m_R / AbsCosTheta( o_wi );
+    }
+
+	
+	/**
+        Compute the Hemispherical-Directional reflectance on the surface in the direction wo
+        The integral of the BDRF toward wo over the hemisphere of incoming directions
+    */
+	override pure const @safe @nogc nothrow
+    Spectrum Rho( in vec3 wo, in vec2[] samples )
+	{
+	    return Spectrum(0.0f);
+	}
+
+	/**
+        Compute the average Hemispherical-Hemispherical reflection on the surface.
+        The same as the Hemispheriecal-Directional reflectance, but averaged over the hemisphere
+          of outgoing directions.
+    */
+	override pure const @safe @nogc nothrow
+    Spectrum Rho( in vec2[] samples1, in vec2[] samples2 )
+	{
+        return m_R;
+	}
+
+}
+
+/// F_TODO:: Add Fresnel Conductor
+///
+
 
