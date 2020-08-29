@@ -132,7 +132,8 @@ class SamplerIntegrator : IIntegrator
 			}
 		}
 
-		import std.stdio;
+		// import std.stdio;
+		// foreach (taskCounter, ref tile; taskPool.parallel( imageTiles ))
 		ulong tilesPerThread = imageTiles.length/m_numThreads;
 		foreach (taskCounter, ref tile; taskPool.parallel( imageTiles, tilesPerThread ))
 		{

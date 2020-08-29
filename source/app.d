@@ -42,12 +42,12 @@ void main( string[] args)
 	
     // Create global memory allocator
     //
-    ulong       stackSize = MegaBytes( 500 );
+    ulong       stackSize = MegaBytes( 1000 );
     void*       rootMemAllocAddress = CAlignedMalloc( stackSize, 16 );
     scope(exit) CAlignedFree( rootMemAllocAddress );
 	
     IMemAlloc  rootMemAlloc = new StackAlloc( rootMemAllocAddress, stackSize );
-	immutable ulong geoStackSize = MegaBytes( 100 );
+	immutable ulong geoStackSize = MegaBytes( 300 );
 	BaseMemAlloc geoAlloc = new StackAlloc( rootMemAlloc.Allocate( geoStackSize ) );
 
     //
@@ -198,16 +198,16 @@ void main( string[] args)
     
     MakeSphereSurfacePrim( vec3( 0.0f ), 1.0f, &brickWallAlbedo );
     MakeSphereSurfacePrim( vec3( 0.0f, -301.0f, 0.0f ), 300.0f, &lambertWhite );     /// Floor
-	MakeSphereSurfacePrim( vec3( -305.0f, 0.0f, 0.0f ), 300.0f, &lambertRed );       /// left wall
-	MakeSphereSurfacePrim( vec3( 305.0f, 0.0f, 0.0f ),  300.0f, &lambertBlue );      /// right wall
-	MakeSphereSurfacePrim( vec3( 0.0f, 0.0f, 308.0f ),  300.0f, &lambertWhite );     /// back wall
+	MakeSphereSurfacePrim( vec3( -306.0f, 0.0f, 0.0f ), 300.0f, &lambertRed );       /// left wall
+	MakeSphereSurfacePrim( vec3( 306.0f, 0.0f, 0.0f ),  300.0f, &lambertBlue );      /// right wall
+	MakeSphereSurfacePrim( vec3( 0.0f, 0.0f, 310.0f ),  300.0f, &lambertWhite );     /// back wall
 	
 	// auto sph1 = MakeSphere( vec3( 0.0f, -601.0f, 0.0f ), 600.0f ); /// F_TODO:: Missing intersections at top of sphere once r >= 500
 	// auto prim1 = MakeSurfacePrim( sph1, &lambertWhite );
 
 	import light;	
-    auto sph_lightGeo = MakeSphere( vec3( 0.0f, 10.0f, 0.0f ), 3.0f );
-	auto sph_light = cast(LightCommon*) geoAlloc.AllocInstance!DiffuseAreaLight( Spectrum(3.0f), sph_lightGeo, 10 /* num samples */ );
+    auto sph_lightGeo = MakeSphere( vec3( 0.0f, 9.0f, -4.0f ), 3.0f );
+	auto sph_light = cast(LightCommon*) geoAlloc.AllocInstance!DiffuseAreaLight( Spectrum(2.5f), sph_lightGeo, 10 /* num samples */ );
 	auto prim_light = cast(PrimCommon*) geoAlloc.AllocInstance!EmissiveSurfacePrim( sph_lightGeo, nullMtl, sph_light );
 	primBuffer.Push( prim_light );
 	
@@ -217,7 +217,7 @@ void main( string[] args)
 	
     Camera renderCam;
     Camera_Init( renderCam,
-                 vec3( 0.0f, 0.0f, -5.0f ) /* eyePos */,
+                 vec3( 0.0f, 1.0f, -6.0f ) /* eyePos */,
                  vec3( 0.0f, 1.0f, 0.0f )  /* up */,
                  vec3( 0.0f, 0.0f, 0.0f ) /* lookAt */,
                  float(imageWidth)/float(imageHeight),
