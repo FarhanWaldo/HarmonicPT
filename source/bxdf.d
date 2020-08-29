@@ -524,3 +524,123 @@ class SpecularTransmissionBTDF : BaseBxDF
     }
 }
 
+class FresnelSpecular : BaseBxDF
+{
+    const Spectrum m_R;
+	const Spectrum m_T;
+	const float    m_etaI;
+	const float    m_etaT;
+
+	FresnelDielectric* m_fresnel;
+    
+    this( Spectrum R, Spectrum T, float etaI, float etaT, FresnelDielectric* fresnel )
+	{
+	    super( BxDFType_Specular | BxDFType_Reflection | BxDFType_Transmission );
+
+		m_R        = R;
+		m_T        = T;
+		m_etaI     = etaI;
+		m_etaT     = etaT;
+		m_fresnel  = fresnel;
+	}
+	
+	/**
+        Evaluate the BxDF for a given outgoing and incident lighting direction.
+        Since this represents a specular scattering event, we make F() return 0 for an arbitrary incidence and exitant angle        
+
+        Params:
+            wo = outgoing direction
+            wi = incident lighting direction
+        Returns:
+            Returns an empty spectrum
+    */
+	override pure const @safe @nogc nothrow
+	Spectrum F( in vec3 wo, in vec3 wi )
+	{
+	    return Spectrum(0.0f);
+	}
+
+	/**
+        Returns the PDF value for a pair of incoming and outgoing directions. Since this is a specular event,
+        its PDF is technically described by a dirac delta function, and we'll be returning 0 for the PDF method.
+        Specular lobes must be used by Sample_F()
+    */
+	override pure const @safe @nogc nothrow
+	float Pdf( in vec3 wo, in vec3 wi )
+	{
+	    return 0.0f;
+	}
+
+    /**
+        Generates a sampling direction (o_wi) and PDF (o_pdf) given a random sample u (2D uniform random number)
+
+        Specular Reflection can only generate a single event when sampling, in the only direction where the PDF is non-zero
+
+        Always assigns 1.0f to the pdf
+    */
+	override pure const @trusted @nogc nothrow
+    Spectrum Sample_F(
+	    in vec3     wo,    
+		in vec2     u,
+		ref vec3    o_wi,
+	    float*      o_pdf,
+		BxDFType*   o_sampledType = null )
+	{
+	    // const float fresnel = m_fresnel.Evaluate( CosTheta(wo), m_etaI, m_etaT );
+	    const float fresnel = Fresnel_Dielectric( CosTheta(wo), m_etaI, m_etaT );
+        Spectrum radiance = Spectrum(0.0f);
+
+		///  We generate a reflection event if the random probability is less than the fresnel
+		///
+		if ( u.x < fresnel )
+		{
+            o_wi = vec3( -1.0f*wo.x, -1.0f*wo.y, wo.z );
+			*o_pdf = fresnel;
+
+            radiance = fresnel*m_R / AbsCosTheta(o_wi);
+			
+		    if ( o_sampledType )
+			{
+			    *o_sampledType = BxDFType_Specular | BxDFType_Reflection;
+			}
+		}
+		///  We generate a transmission event in the other case
+		///
+		else
+		{
+			const bool entering = CosTheta( wo ) > 0.0f;
+			const float etaI    = entering ? m_etaI : m_etaT;
+			const float etaT    = entering ? m_etaT : m_etaI;
+
+			const vec3 z = vec3( 0.0f, 0.0f, 1.0f );
+			const vec3 orientedNormal = FaceForward( wo, z ); /// Returns -z if wo and z are on opposite hemispheres
+
+			if ( !Refract( wo, orientedNormal, etaI/etaT, o_wi ) )
+			{
+				///    We have total internal refraction in this case. No transmission, return empty spectrum!
+				///
+				return Spectrum( 0.0f );
+			}
+
+			*o_pdf = 1.0f - fresnel;
+
+			///  The amount of light transmitted is 1 - the amount reflected (fresnel response)
+			///
+			const Spectrum transmittedEnergy = Spectrum(1.0f - fresnel);
+
+			/// F_TODO:: Add check here for if transport mode is radiance
+			/// Radiant flux is scaled up as light passes through a medium, due to relying on spatial density 
+			///
+			const float scale = (etaI*etaI)/(etaT*etaT); //// F_TODO:: verify if this correct scaling 
+
+			radiance = (scale/AbsCosTheta(o_wi))*m_T*transmittedEnergy;
+
+		    if ( o_sampledType )
+			{
+			    *o_sampledType = BxDFType_Specular | BxDFType_Transmission;
+			}
+		}
+		
+	    return radiance;
+    }
+}
