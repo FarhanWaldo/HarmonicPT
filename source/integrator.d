@@ -132,7 +132,8 @@ class SamplerIntegrator : IIntegrator
 			}
 		}
 
-		import std.stdio;
+		// import std.stdio;
+		// foreach (taskCounter, ref tile; taskPool.parallel( imageTiles ))
 		ulong tilesPerThread = imageTiles.length/m_numThreads;
 		foreach (taskCounter, ref tile; taskPool.parallel( imageTiles, tilesPerThread ))
 		{
@@ -330,9 +331,7 @@ class PathTracingIntegrator : SamplerIntegrator
 			}
 
 			specularBounce = IsSpecular( flags );
-			/// TRANSMISSION HACK
-			/// bool transmission bounce
-
+			
 			///  Update throughput of the path for the next bounce
 			///
 			throughput = throughput*F*Abs( v_dot(wi,surfIntx.m_shading.n) )/pdf;

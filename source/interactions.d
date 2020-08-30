@@ -31,7 +31,10 @@ struct Interaction
     {
         Ray newRay = void;
 
-        newRay.m_origin = m_pos + 10.0f*EPSILON*m_normal; // TODO:: Do better than arbitrary multiplying by 10*EPSILON
+        const bool enteringSurface = v_dot( dir, m_normal ) < 0.0f;
+		const vec3 offsetP = (enteringSurface? -1.0f : 1.0f) * 10.0f*EPSILON*m_normal;
+		
+		newRay.m_origin = m_pos + offsetP;
         newRay.m_dir    = v_normalise( dir );
         newRay.m_maxT   = float.max;
 

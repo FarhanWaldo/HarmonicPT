@@ -180,7 +180,7 @@ Sphere_Sample( CShapeSphere* sphere, in vec2 randomSample )
 	vec3 p = sphere.m_geo.m_centre + sphere.m_geo.m_radius*n;
 
     auto  intx = Interaction( p, n, 0.0f /* FW_TODO::[time] */ );
-	intx.m_posError = 0.00001 * p.abs(); /* FW_TODO::[precision] */ 
+	intx.m_posError = 0.00001 * p; /* FW_TODO::[precision] */ 
 	
 	return intx;
 }
@@ -261,7 +261,7 @@ Sphere_Sample( CShapeSphere* sphere, CInteraction* refPoint, in vec2 randomSampl
     vec3 sphereP = r * sphereN;
 	sphereP *= r/(sphereP.magnitude()); // apply some numerical correction...
 
-	const vec3 pError = 0.0001f * sphereP.abs(); /* FW_TODO::[precision] */
+	const vec3 pError = 0.0001f * sphereP; /* FW_TODO::[precision] */
 
     const vec3 offsetSphereP = sphereP + centre + 0.001*sphereN;
 	
@@ -342,6 +342,6 @@ void Sphere_GetShadingInfo( CShapeSphere* sphere, ref SurfaceInteraction surfInt
 								   dndu, dndv,
 								   0.0f /* time */ );
 
-	surfIntx.m_posError = 0.0001* intRes.m_contactPos.abs(); // TODO::[precision][geometry]
+	surfIntx.m_posError = 0.0001* intRes.m_contactPos; // TODO::[precision][geometry]
 	 
 }
