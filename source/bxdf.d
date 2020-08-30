@@ -524,16 +524,14 @@ class SpecularTransmissionBTDF : BaseBxDF
     }
 }
 
-class FresnelSpecular : BaseBxDF
+class FresnelSpecularBxDF : BaseBxDF
 {
     const Spectrum m_R;
 	const Spectrum m_T;
 	const float    m_etaI;
 	const float    m_etaT;
-
-	FresnelDielectric* m_fresnel;
     
-    this( Spectrum R, Spectrum T, float etaI, float etaT, FresnelDielectric* fresnel )
+    this( in Spectrum R, in Spectrum T, float etaI, float etaT )
 	{
 	    super( BxDFType_Specular | BxDFType_Reflection | BxDFType_Transmission );
 
@@ -541,7 +539,6 @@ class FresnelSpecular : BaseBxDF
 		m_T        = T;
 		m_etaI     = etaI;
 		m_etaT     = etaT;
-		m_fresnel  = fresnel;
 	}
 	
 	/**

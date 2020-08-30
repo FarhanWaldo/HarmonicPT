@@ -331,9 +331,7 @@ class PathTracingIntegrator : SamplerIntegrator
 			}
 
 			specularBounce = IsSpecular( flags );
-			/// TRANSMISSION HACK
-			/// bool transmission bounce
-
+			
 			///  Update throughput of the path for the next bounce
 			///
 			throughput = throughput*F*Abs( v_dot(wi,surfIntx.m_shading.n) )/pdf;

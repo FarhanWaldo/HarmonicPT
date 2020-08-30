@@ -194,20 +194,22 @@ void main( string[] args)
 	IMaterial lambertBlue      = *geoAlloc.AllocInstance!MatteMaterial( &texBlue );
 	IMaterial lambertWhite     = *geoAlloc.AllocInstance!MatteMaterial( &texWhite ); 
     IMaterial brickWallAlbedo  = *geoAlloc.AllocInstance!MatteMaterial( &texImgBrickWall );
+	IMaterial fresnelSpecMtl   = *geoAlloc.AllocInstance!FresnelSpecMaterial( &texWhite, 1.0f, 1.7f );
 
     
-    MakeSphereSurfacePrim( vec3( 0.0f ), 1.0f, &brickWallAlbedo );
+    MakeSphereSurfacePrim( vec3( 0.0f, 1.0f, 4.5f ), 2.0f, &brickWallAlbedo );
+    MakeSphereSurfacePrim( vec3( 0.0f, 0.0f, -1.0f ), 1.0f, &fresnelSpecMtl );
     MakeSphereSurfacePrim( vec3( 0.0f, -301.0f, 0.0f ), 300.0f, &lambertWhite );     /// Floor
 	MakeSphereSurfacePrim( vec3( -306.0f, 0.0f, 0.0f ), 300.0f, &lambertRed );       /// left wall
 	MakeSphereSurfacePrim( vec3( 306.0f, 0.0f, 0.0f ),  300.0f, &lambertBlue );      /// right wall
-	MakeSphereSurfacePrim( vec3( 0.0f, 0.0f, 310.0f ),  300.0f, &lambertWhite );     /// back wall
+	MakeSphereSurfacePrim( vec3( 0.0f, 0.0f, 310.0f ),  300.0f, &lambertGreen );     /// back wall
 	
 	// auto sph1 = MakeSphere( vec3( 0.0f, -601.0f, 0.0f ), 600.0f ); /// F_TODO:: Missing intersections at top of sphere once r >= 500
 	// auto prim1 = MakeSurfacePrim( sph1, &lambertWhite );
 
 	import light;	
-    auto sph_lightGeo = MakeSphere( vec3( 0.0f, 9.0f, -4.0f ), 3.0f );
-	auto sph_light = cast(LightCommon*) geoAlloc.AllocInstance!DiffuseAreaLight( Spectrum(2.5f), sph_lightGeo, 10 /* num samples */ );
+    auto sph_lightGeo = MakeSphere( vec3( 0.0f, 8.0f, -1.0f ), 3.0f );
+	auto sph_light = cast(LightCommon*) geoAlloc.AllocInstance!DiffuseAreaLight( Spectrum(3.0f), sph_lightGeo, 10 /* num samples */ );
 	auto prim_light = cast(PrimCommon*) geoAlloc.AllocInstance!EmissiveSurfacePrim( sph_lightGeo, nullMtl, sph_light );
 	primBuffer.Push( prim_light );
 	
@@ -217,7 +219,7 @@ void main( string[] args)
 	
     Camera renderCam;
     Camera_Init( renderCam,
-                 vec3( 0.0f, 1.0f, -6.0f ) /* eyePos */,
+                 vec3( -0.5f, 1.5f, -7.0f ) /* eyePos */,
                  vec3( 0.0f, 1.0f, 0.0f )  /* up */,
                  vec3( 0.0f, 0.0f, 0.0f ) /* lookAt */,
                  float(imageWidth)/float(imageHeight),
