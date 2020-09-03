@@ -124,8 +124,13 @@ bool SameHemisphere( in vec3 a, in vec3 b ) {
 }
 
 pure @safe @nogc nothrow
+bool OnOppositeHemispheres( in vec3 a, in vec3 b ) {
+	return (a.z*b.z) < 0.0f;
+}
+
+pure @safe @nogc nothrow
 vec3 FaceForward( in vec3 v, in vec3 n ) {
-    return ( v_dot( v, n ) >= 0.0f ) ? n : -1.0f*n;
+    return ( v_dot(v, n) >= 0.0f ) ? n : -1.0f*n;
 }
 
 ///
@@ -161,7 +166,7 @@ class FresnelDielectric : IFresnel
 	pure @nogc const nothrow override
 	Spectrum Evaluate( float cosIncidence )
 	{
-		return Spectrum( Fresnel_Dielectric( cosIncidence, m_etaI, m_etaT ) );
+		return Spectrum( Fresnel_Dielectric( cosIncidence, m_etaI, m_etaT) );
 	}
 }
 
