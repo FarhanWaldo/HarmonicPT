@@ -89,11 +89,6 @@ abstract class BaseMicrofacetDistribution
 }
 
 
-//////////////////////////////
-////
-////   HEY NILOY: Finish implementing the Beckmann distribution
-////
-///////////////////////////////////
 class BeckmannDistribution : BaseMicrofacetDistribution
 {
     ///  Controls size of microfacet distrbution
@@ -124,8 +119,14 @@ class BeckmannDistribution : BaseMicrofacetDistribution
 	/**
         Evaluate the given Microfacet distribution for a given half-angle vector wh
 
+        Beckmann Distribution:
+
+						e^( -Tan2(theta)( Cos2(phi)/a_x*a_x + Sin2(phi)/a_y*a_y ) )
+			D( wh ) =  --------------------------------------------------------------
+									  PI * a_x * a_y * Cos4( theta )
+
         Params:
-            wh = The half-angle vector; |(wi + wo)/2| ( halfway between incidence and outgoing direction)
+            wh = The half-angle vector; i.e. (wi + wo)/||wi + wo|| ( halfway between incidence and outgoing direction)
 
         Returns:
             Ratio of normals oriented aligned with the half-angle vector -> [0.0, 1.0]
@@ -133,15 +134,36 @@ class BeckmannDistribution : BaseMicrofacetDistribution
 	override pure @safe @nogc nothrow const
 	float D( in vec3 wh )
 	{
-	    /// F_TODO:: Implement
-	    return 0.0f;
+		import std.math : isFinite, exp;
+		
+		const float tan2Theta = Tan2Theta( wh );
+        if ( !isFinite( tan2Theta )) { return 0.0f; }
+
+        const float cos4Theta = Cos2Theta(wh)*Cos2Theta(wh);
+		const float a_xx = m_alphaX*m_alphaX;
+		const float a_xy = m_alphaX*m_alphaY;
+		const float a_yy = m_alphaY*m_alphaY;
+		
+	    return exp( -tan2Theta*( Cos2Phi(wh)/a_xx + Sin2Phi(wh)/a_yy ))  /
+			                ( PI*a_xy*cos4Theta );
 	}
 
 	
 	override pure @safe @nogc nothrow const
 	float Lambda( in vec3 w )
 	{
-	    return 0.0f;
+		import std.math : isFinite, sqrt;
+		
+		const float absTanTheta = Abs( TanTheta( w) );
+		if ( !isFinite( absTanTheta ) ) { return 0.0f; }
+
+		const float alpha = sqrt( Cos2Phi( w )*m_alphaX*m_alphaX + Sin2Phi( w )*m_alphaY*m_alphaY );
+
+		const float a = 1.0f / ( alpha * absTanTheta );
+		if ( a > 1.6f ) { return 0.0f; }
+
+		return (1 - 1.259f * a + 0.396f * a * a) /
+			     (3.535f * a + 2.181f * a * a);
 	}
 
 
@@ -158,6 +180,38 @@ class BeckmannDistribution : BaseMicrofacetDistribution
 	override pure @safe @nogc nothrow const
 	vec3 Sample_Wh( in vec3 wo, in vec2 u )
 	{
-	    return vec3(0.0f);
+        import std.math : log, sin, cos, sqrt;
+		
+		if ( m_sampleVisibleNormals )
+		{
+			// F_TODO::
+			return vec3( 0.0f );
+		}
+		else
+		{
+			float tan2Theta = 0.0f;
+			float phi       = 0.0f;
+
+			// if ( m_alphaX == m_alphaY )
+			{
+				float logSample = log( 1.0f - u.x );
+				tan2Theta = -m_alphaX*m_alphaX*logSample;
+				phi = u.y*TAU;
+			}
+			// else    // anisotropic
+			{
+				// F_TODO::
+			}
+
+			const float cosTheta  = 1.0f / sqrt( 1.0f + tan2Theta );
+			const float sinTheta  = SafeSqrt( 1.0f - cosTheta*cosTheta );
+			const float sinPhi    = sin(phi);
+			
+			vec3 wh = vec3( sinPhi*cosTheta, sinPhi*sinTheta, cos( phi ) );
+
+			if ( OnOppositeHemispheres( wo, wh ) ) { wh = -1.0f*wh; }
+
+			return wh;
+		}
 	}
 }
