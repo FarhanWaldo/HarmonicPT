@@ -138,13 +138,13 @@ vec3 FaceForward( in vec3 v, in vec3 n ) {
 ///
 interface IFresnel
 {
-	pure @nogc const nothrow
+	pure @nogc @safe const nothrow
 	Spectrum Evaluate( float cosIncidence );
 }
 
 class FresnelConstant : IFresnel
 {
-	pure @nogc const nothrow override
+	pure @nogc @safe const nothrow override
 	Spectrum Evaluate( float cosIncidence )
 	{
         return Spectrum( 1.0f );
@@ -156,14 +156,14 @@ class FresnelDielectric : IFresnel
     float m_etaI;  /// index of refraction in incident medium
 	float m_etaT;  /// index of refraction in transmitted medium
 
-    pure @nogc const nothrow
+    pure @nogc @safe const nothrow
 	this( float etaIncident, float etaTransmitted )
 	{
 		m_etaI = etaIncident;
 		m_etaT = etaTransmitted;
 	}
 	
-	pure @nogc const nothrow override
+	pure @nogc @safe const nothrow override
 	Spectrum Evaluate( float cosIncidence )
 	{
 		return Spectrum( Fresnel_Dielectric( cosIncidence, m_etaI, m_etaT) );

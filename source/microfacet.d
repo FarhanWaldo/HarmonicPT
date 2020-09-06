@@ -1,6 +1,93 @@
+import spectrum;
 import bxdf;
 import fwmath;
 
+
+class MicrofacetReflection : BaseBxDF
+{
+	const Spectrum   m_R;
+    const IFresnel*  m_fresnel;
+	
+	const BaseMicrofacetDistribution* m_distribution;
+
+    this( in Spectrum reflectance, IFresnel* fresnel, BaseMicrofacetDistribution* distribution )
+	{
+		super( BxDFType_Glossy | BxDFType_Reflection );
+		m_R            = reflectance;
+		m_fresnel      = fresnel;
+        m_distribution = distribution;
+	}
+	
+	/**
+        Evaluate the BxDF for a given outgoing and incident lighting direction.
+
+        Params:
+            wo = outgoing direction
+            wi = incident lighting direction
+        Returns:
+            Returns an empty spectrum
+    */
+	override pure const @safe @nogc nothrow
+	Spectrum F( in vec3 wo, in vec3 wi )
+	{
+		const float cosThetaO = CosTheta( wo );
+		const float cosThetaI = CosTheta( wi );
+
+		/// Half-angle vector
+		vec3 wh = wo + wi;
+
+        /// Handle degenerate cases
+		///
+		if ( cosThetaO == 0.0f || cosThetaI == 0.0f ) { return Spectrum(0.0f); }
+        if ( wh.x == 0.0f && wh.y == 0.0f && wh.z == 0.0f ) { return Spectrum(0.0f); }
+
+        wh.normalise();
+        const vec3 n = vec3( 0.0f, 0.0f, 1.0f );
+		
+		Spectrum fresnel = m_fresnel.Evaluate(v_dot( wh, FaceForward( wh, n )) );
+
+		return
+			m_R * m_distribution.D( wh ) * m_distribution.G( wo, wi ) * fresnel /
+			(4.0f*cosThetaO*cosThetaI);
+	}
+
+	/**
+        Returns the PDF value for a pair of incoming and outgoing directions.
+    */
+	override pure const @safe @nogc nothrow
+	float Pdf( in vec3 wo, in vec3 wi )
+	{
+		if (OnOppositeHemispheres(wo,wi))  { return 0.0f; }
+		vec3 wh = wo+wi;
+		wh.normalise();
+		
+		return m_distribution.Pdf(wo,wh)/
+			     (4.0f*v_dot(wo, wh));
+	}
+	
+    /**
+        Generates a sampling direction (o_wi) and PDF (o_pdf) given a random sample u (2D uniform random number)
+    */
+	override pure const @trusted @nogc nothrow
+    Spectrum Sample_F(
+	    in vec3     wo,    
+		in vec2     u,
+		ref vec3    o_wi,
+	    float*      o_pdf,
+		BxDFType*   o_sampledType = null )
+	{
+		if ( wo.z == 0.0f ) { return Spectrum(0.0f); }
+		const vec3 wh = m_distribution.Sample_Wh( wo, u );
+		if ( v_dot(wo,wh) < 0.0f ) { return Spectrum(0.0f); } /// rare case
+
+		o_wi = Reflect(wo,wh);
+		if (OnOppositeHemispheres(wo, o_wi)) { return Spectrum(0.0f); }
+
+		*o_pdf = m_distribution.Pdf(wo,wh) / (4.0f*v_dot(wo,wh));
+		return F( wo, o_wi );
+		
+    }	
+}
 
 /**
     Maps a normalised floating point value for roughness to alpha for microfacet distributions
@@ -144,7 +231,7 @@ class BeckmannDistribution : BaseMicrofacetDistribution
 		const float a_xy = m_alphaX*m_alphaY;
 		const float a_yy = m_alphaY*m_alphaY;
 		
-	    return exp( -tan2Theta*( Cos2Phi(wh)/a_xx + Sin2Phi(wh)/a_yy ))  /
+	    return exp( -tan2Theta*(Cos2Phi(wh)/a_xx + Sin2Phi(wh)/a_yy) )  /
 			                ( PI*a_xy*cos4Theta );
 	}
 
@@ -192,7 +279,7 @@ class BeckmannDistribution : BaseMicrofacetDistribution
 			float tan2Theta = 0.0f;
 			float phi       = 0.0f;
 
-			// if ( m_alphaX == m_alphaY )
+			// if ( m_alphaX == m_alphaY ) // isotropic case
 			{
 				float logSample = log( 1.0f - u.x );
 				tan2Theta = -m_alphaX*m_alphaX*logSample;
@@ -209,9 +296,11 @@ class BeckmannDistribution : BaseMicrofacetDistribution
 			
 			vec3 wh = vec3( sinPhi*cosTheta, sinPhi*sinTheta, cos( phi ) );
 
-			if ( OnOppositeHemispheres( wo, wh ) ) { wh = -1.0f*wh; }
+			if (OnOppositeHemispheres( wo, wh )) { wh = -1.0f*wh; }
 
 			return wh;
 		}
 	}
 }
+
+
