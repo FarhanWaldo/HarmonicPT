@@ -72,3 +72,8 @@ class FresnelSpecMaterial : IMaterial
 		si.m_bsdf.AddBxDF( fresnelSpecularLobe );
 	}	
 }
+
+class UberMaterial : IMaterial
+{
+	ITexture* m_albedo; 
+}
