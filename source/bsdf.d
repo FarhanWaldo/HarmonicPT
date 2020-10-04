@@ -39,7 +39,8 @@ struct Bsdf
     uint NumComponents( BxDFType flags = BxDFType_All )
     {
         uint numMatching = 0;
-        foreach( bxdf; m_bxdfs.range() ) {
+		const ulong numLobes = m_bxdfs.GetCount();
+        foreach( bxdf; m_bxdfs[0..numLobes] ) {
             if ( bxdf.MatchesType( flags ) ) {
                 ++numMatching;
             }
@@ -50,10 +51,11 @@ struct Bsdf
     pure const @trusted @nogc nothrow
     void Filter( ref BxDFStack filteredLobes, BxDFType flags )
     {
-        foreach( bxdf; m_bxdfs.range() ) {
-            // if( bxdf.MatchesType( flags ) ) {
+		const ulong numLobes = m_bxdfs.GetCount();
+        foreach( bxdf; m_bxdfs[0..numLobes] ) {
+            if( bxdf.MatchesType( flags ) ) {
                 filteredLobes.Push( bxdf );
-            // }
+            }
         }
     }
     
@@ -65,9 +67,9 @@ struct Bsdf
         BxDFStack filteredLobes;
         const ulong numLobes = m_bxdfs.GetCount();
         foreach( bxdf; m_bxdfs[0..numLobes] ) {
-            // if ( bxdf.MatchesType(flags) ) {
+            if ( bxdf.MatchesType(flags) ) {
                 filteredLobes.Push( bxdf );
-            // }
+            }
         }
         return filteredLobes;
     }

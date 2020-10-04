@@ -73,7 +73,7 @@ class FresnelSpecMaterial : IMaterial
 	}	
 }
 
-class UberMaterial : IMaterial
-{
-	ITexture* m_albedo; 
-}
+// class UberMaterial : IMaterial
+// {
+// 	ITexture* m_albedo; 
+// }
