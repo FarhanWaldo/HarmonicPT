@@ -25,6 +25,10 @@
 	"sourceFiles-osx-x86_64-dmd": [
 		"source/stb_image_write.o"
 	],
+    "sourceFiles-osx-x86_64-ldc" : [
+        "source/stb_image_write.o",
+        "source/stb_image.o"
+    ],
 	"sourceFiles-windows-x86_64-dmd": [
 		"source/stb_image_write.obj",
 		"source/stb_image.obj"
