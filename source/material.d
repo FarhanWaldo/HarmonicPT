@@ -1,3 +1,4 @@
+import fwmath;
 import memory;
 import interactions;
 import bsdf;
@@ -34,7 +35,9 @@ class MatteMaterial : IMaterial
 	{
 		si.m_bsdf = memArena.AllocInstance!Bsdf( si.m_normal, si.m_shading.n, si.m_shading.dpdu );
 
-		Spectrum reflectance = m_albedo.Sample( si );
+		// Spectrum reflectance = m_albedo.Sample( si );
+        const vec4 r = m_albedo.Sample( si ); // F_TODO:: Create ISpectralTexture interface for this...
+        const vec3 reflectance = vec3( r.x, r.y, r. z );
 		const (BaseBxDF)* lambertLobe = memArena.AllocInstance!LambertBRDF( reflectance );
 		si.m_bsdf.AddBxDF( lambertLobe );
 	}
@@ -63,7 +66,10 @@ class FresnelSpecMaterial : IMaterial
 	{
 		si.m_bsdf = memArena.AllocInstance!Bsdf( si.m_normal, si.m_shading.n, si.m_shading.dpdu );
 
-		Spectrum reflectance = m_R.Sample( si );
+        /// F_TODO:: Create ISpectralTexture interface for this....
+		// Spectrum reflectance = m_R.Sample( si );
+        const vec4 r = m_R.Sample( si );
+        const vec3 reflectance = vec3( r.x, r.y, r.z );
 		Spectrum T = Spectrum( 1.0f );
 
 		const (BaseBxDF)* fresnelSpecularLobe =
