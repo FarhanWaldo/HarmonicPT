@@ -28,7 +28,7 @@ class FlatColour : ITexture
 
 enum ImageFormat 
 {
-    Invalid,
+    Invalid = 0,
 
     /// The type of the channel and the number of channels
     ///
@@ -66,14 +66,20 @@ ulong GetComponentSizeInBytes( ImageFormat format )
         return 0;
 }
 
+pure @nogc @safe nothrow
+ulong GetNumComponentsPerPixel( ImageFormat format )
+{
+    return ( format != ImageFormat.Invalid ) ?  (format%4) + 1 : 0;
+}
+
 /**
  */
 class ImageTexture : ITexture
 {
-	const(ubyte)* m_imageData;     /// A read-only, non-owning pointer to image data. One byte per channel.
-	const uint   m_height;       
-	const uint   m_width;
-	const uint   m_numChannels;
+	const(ubyte)*      m_imageData;     /// A read-only, non-owning pointer to image data. One byte per channel.
+	const uint         m_height;       
+	const uint         m_width;
+	const uint         m_numChannels;
 
     const ImageFormat  m_format;
     const ImageFormat  m_componentType;
@@ -112,15 +118,23 @@ class ImageTexture : ITexture
 			foreach ( c; 0..nc )
 			{
                 float value = 0.0f;
+                
+                const ulong channelIndex = (m_numChannels*pixelIndex + c)*bytesPerComponent;
+                union Channel
+                {
+                    const(ubyte*) _asByte;
+                    const(float*) _asFloat;
+                }
+                Channel channel = { _asByte : &pData[ channelIndex ] };
 
                 if ( m_componentType == ImageFormat.Byte )
                 {
-                    value = cast(float)( pData[ m_numChannels*pixelIndex + c]/255.0f );
+                    /// If image is stored as byte we have to remap [0, 255] -> [0.0, 1.0]
+                    value = cast(float)((*channel._asByte)) / 255.0f;
                 }
                 else if ( m_componentType == ImageFormat.Float )
                 {
-                    const(float)* imgDataAsFloat = cast(const(float)*) pData[ (m_numChannels*pixelIndex + c)*bytesPerComponent ];
-                    value = *imgDataAsFloat;
+                    value = *channel._asFloat;
                 }
                 
 
