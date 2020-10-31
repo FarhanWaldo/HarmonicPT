@@ -44,19 +44,26 @@ enum ImageFormat
     Float4
 }
 
-pure @nogc @safe nothrow
-ImageFormat GetComponentType( ImageFormat format )
+enum ChannelType
 {
-    if ((format <= ImageFormat.Byte4) && (format >= ImageFormat.Byte))
-        return ImageFormat.Byte;
-    else if ((format <= ImageFormat.Float4) && (format >= ImageFormat.Float))
-        return ImageFormat.Float;
-    else
-        return ImageFormat.Invalid;
+    Invalid,
+    Byte,
+    Float
 }
 
 pure @nogc @safe nothrow
-ulong GetComponentSizeInBytes( ImageFormat format )
+ChannelType GetChannelType( ImageFormat format )
+{
+    if ((format <= ImageFormat.Byte4) && (format >= ImageFormat.Byte))
+        return ChannelType.Byte;
+    else if ((format <= ImageFormat.Float4) && (format >= ImageFormat.Float))
+        return ChannelType.Float;
+    else
+        return ChannelType.Invalid;
+}
+
+pure @nogc @safe nothrow
+ulong GetChannelSizeInBytes( ImageFormat format )
 {
     if ((format <= ImageFormat.Byte4) && (format >= ImageFormat.Byte))
         return 1;
@@ -66,11 +73,6 @@ ulong GetComponentSizeInBytes( ImageFormat format )
         return 0;
 }
 
-pure @nogc @safe nothrow
-ulong GetNumComponentsPerPixel( ImageFormat format )
-{
-    return ( format != ImageFormat.Invalid ) ?  (format%4) + 1 : 0;
-}
 
 /**
  */
@@ -79,10 +81,11 @@ class ImageTexture : ITexture
 	const(ubyte)*      m_imageData;     /// A read-only, non-owning pointer to image data. One byte per channel.
 	const uint         m_height;       
 	const uint         m_width;
-	const uint         m_numChannels;
 
     const ImageFormat  m_format;
-    const ImageFormat  m_componentType;
+    const uint         m_numChannels;
+    const ChannelType  m_channelType;
+    const ulong        m_channelSizeInBytes;
     
 	pure @nogc nothrow
 	this( ubyte* imgDataPtr, uint imgHeight, uint imgWidth, uint numChannels, ImageFormat format )
@@ -93,7 +96,8 @@ class ImageTexture : ITexture
 		m_numChannels = numChannels;
 
         m_format = format;
-        m_componentType = GetComponentType( format );
+        m_channelType = GetChannelType( format );
+        m_channelSizeInBytes = GetChannelSizeInBytes( format );
 	}
 
 	override pure const @nogc @trusted nothrow
@@ -113,30 +117,29 @@ class ImageTexture : ITexture
 			const int i = Clamp( cast(int)( uv[0]*nx ), 0, nx - 1 );
 			const int j = Clamp( cast(int)( (1.0f - uv[1])*ny -0.001 ), 0, ny -1 );
             const ulong pixelIndex = nx*j + i;
-            const ulong bytesPerComponent = GetComponentSizeInBytes( m_format );
+            const ulong channelSize = m_channelSizeInBytes;
             
 			foreach ( c; 0..nc )
 			{
                 float value = 0.0f;
                 
-                const ulong channelIndex = (m_numChannels*pixelIndex + c)*bytesPerComponent;
+                const ulong channelOffset = (m_numChannels*pixelIndex + c)*channelSize;
                 union Channel
                 {
                     const(ubyte*) _asByte;
                     const(float*) _asFloat;
                 }
-                Channel channel = { _asByte : &pData[ channelIndex ] };
+                Channel channel = { _asByte : &pData[ channelOffset ] };
 
-                if ( m_componentType == ImageFormat.Byte )
+                if ( m_channelType == ChannelType.Byte )
                 {
                     /// If image is stored as byte we have to remap [0, 255] -> [0.0, 1.0]
                     value = cast(float)((*channel._asByte)) / 255.0f;
                 }
-                else if ( m_componentType == ImageFormat.Float )
+                else if ( m_channelType == ChannelType.Float )
                 {
                     value = *channel._asFloat;
                 }
-                
 
 				color[c] = Clamp( value, 0.0f, 1.0f );
 			}
