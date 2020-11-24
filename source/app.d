@@ -21,7 +21,6 @@ import spectrum;
 import texture;
 
 
-
 void main( string[] args)
 {
     // Disable the garbage collector
@@ -188,6 +187,7 @@ void main( string[] args)
     ITexture texBlue  = new FlatColour( Spectrum( 0.0f, 0.0f, 0.8f ) );
     ITexture texWhite = new FlatColour( Spectrum( 0.8f, 0.8f, 0.8f ) );
     ITexture texImgBrickWall = ImageTexture_LoadFromFile( "assets/brick_wall.jpg", true /* do linear space conversion*/ );
+    ITexture texConst  = new FlatColour( vec3( 0.3f ));
     
     IMaterial lambertRed       = *geoAlloc.AllocInstance!MatteMaterial( &texRed );
     IMaterial lambertGreen     = *geoAlloc.AllocInstance!MatteMaterial( &texGreen );
@@ -195,13 +195,15 @@ void main( string[] args)
     IMaterial lambertWhite     = *geoAlloc.AllocInstance!MatteMaterial( &texWhite ); 
     IMaterial brickWallAlbedo  = *geoAlloc.AllocInstance!MatteMaterial( &texImgBrickWall );
     IMaterial fresnelSpecMtl   = *geoAlloc.AllocInstance!FresnelSpecMaterial( &texWhite, 1.0f, 1.7f );
-
+    IMaterial plasticMtl       = *geoAlloc.AllocInstance!PlasticMaterial( &texGreen, &texWhite, &texConst, true /* remap roughness */ );
     
-    MakeSphereSurfacePrim( vec3( 0.0f, 1.0f, 4.5f ), 2.0f, &brickWallAlbedo );
+    // MakeSphereSurfacePrim( vec3( 0.0f, 1.0f, 4.5f ), 2.0f, &brickWallAlbedo );
+    MakeSphereSurfacePrim( vec3( 0.0f, 1.0f, 4.5f ), 2.0f, &plasticMtl );
     MakeSphereSurfacePrim( vec3( 0.0f, 0.0f, -1.0f ), 1.0f, &fresnelSpecMtl );
+    // MakeSphereSurfacePrim( vec3( 0.0f, 0.0f, -1.0f ), 1.0f, &plasticMtl );
     MakeSphereSurfacePrim( vec3( 0.0f, -301.0f, 0.0f ), 300.0f, &lambertWhite );     /// Floor
-    MakeSphereSurfacePrim( vec3( -306.0f, 0.0f, 0.0f ), 300.0f, &lambertRed );       /// left wall
-    MakeSphereSurfacePrim( vec3( 306.0f, 0.0f, 0.0f ),  300.0f, &lambertBlue );      /// right wall
+    MakeSphereSurfacePrim( vec3( -306.0f, 0.0f, 0.0f ), 300.0f, &lambertWhite /*Red*/ );       /// left wall
+    MakeSphereSurfacePrim( vec3( 306.0f, 0.0f, 0.0f ),  300.0f, &lambertWhite /*blue*/  );      /// right wall
     MakeSphereSurfacePrim( vec3( 0.0f, 0.0f, 310.0f ),  300.0f, &lambertGreen );     /// back wall
     
     // auto sph1 = MakeSphere( vec3( 0.0f, -601.0f, 0.0f ), 600.0f ); /// F_TODO:: Missing intersections at top of sphere once r >= 500
@@ -209,7 +211,7 @@ void main( string[] args)
 
     import light;   
     auto sph_lightGeo = MakeSphere( vec3( 0.0f, 8.0f, -1.0f ), 3.0f );
-    auto sph_light = cast(LightCommon*) geoAlloc.AllocInstance!DiffuseAreaLight( Spectrum(3.0f), sph_lightGeo, 10 /* num samples */ );
+    auto sph_light = cast(LightCommon*) geoAlloc.AllocInstance!DiffuseAreaLight( Spectrum(2.0f, 2.0f, 2.0f), sph_lightGeo, 10 /* num samples */ );
     auto prim_light = cast(PrimCommon*) geoAlloc.AllocInstance!EmissiveSurfacePrim( sph_lightGeo, nullMtl, sph_light );
     primBuffer.Push( prim_light );
     

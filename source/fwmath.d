@@ -255,10 +255,6 @@ struct VecT( Type, int Dim )
     this( Type v )
     {
 	    data[] = v;
-        // data[0] = v;
-        // data[1] = v;
-        // static if ( Dim >= 3 ) data[2] = v;
-        // static if ( Dim >= 4 ) data[3] = v;
     }
 
     //  Specialise constructor by dimension

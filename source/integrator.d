@@ -73,7 +73,7 @@ class SamplerIntegrator : IIntegrator
 		  uint numThreads,
 		  uint maxProgressions = 128,
 		  uint maxBounces = 6,
-		  ulong perThreadArenaSizeBytes = MegaBytes(2))
+		  ulong perThreadArenaSizeBytes = MegaBytes(4))
     {
         m_sampler         = sampler;
         m_camera          = cam;
