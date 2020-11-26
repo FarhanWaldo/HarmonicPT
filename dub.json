@@ -18,7 +18,7 @@
 		"-gf"
 	],
 	"ldc2-dflags": [
-		"-g", "-O", "-release", "-mcpu=native"
+		"-gc", "-O", "-release", "-mcpu=native"
 	],
 	"license": "proprietary",
 	"name": "d-pathtracer",

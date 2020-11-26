@@ -304,7 +304,9 @@ struct VecT( Type, int Dim )
 	@nogc @safe nothrow
     void normalise()
     {
-        this = (Type( 1 )/this.magnitude)*this;
+        float mag = this.magnitude();
+        if ( mag != Type(0.0))
+            this = (Type( 1 )/mag)*this;
     }
 
     pure const @nogc @safe nothrow

@@ -39,7 +39,8 @@ struct FilmTile
 }
 
 
-interface IIntegrator
+// interface IIntegrator
+abstract class IIntegrator
 {
     void Init( in Scene* scene,  IMemAlloc* memArena );
 
@@ -150,6 +151,7 @@ class SamplerIntegrator : IIntegrator
 					Spectrum pixelColour = Spectrum(0.0);
 					foreach ( progression; 0 .. numProgressions )
 					{
+						m_perThreadArena[threadId].Reset();
 						const vec2 pixelPos = vec2( cast(float) i, cast(float) j );
 						const vec2 jitteredPos = pixelPos + m_sampler.Get2D();
 
@@ -157,8 +159,6 @@ class SamplerIntegrator : IIntegrator
 						m_camera.SpawnRay( jitteredPos, cameraDims, cameraRay );
 
 						pixelColour += Irradiance( cameraRay, scene, &m_perThreadSampler[threadId] , &m_perThreadArena[threadId] );
-
-						m_perThreadArena[threadId].Reset();
 					}
 
 					const float ir = pixelColour.r;

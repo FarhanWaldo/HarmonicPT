@@ -4,7 +4,8 @@ import interactions;
 
 extern(C) nothrow ubyte* stbi_load( char* filename, int* x, int* y, int* n, int desiredChannels =0 );
 
-interface ITexture
+// interface ITexture
+abstract class ITexture
 {
 	pure const @nogc @safe nothrow
 	vec4 Sample( CSurfaceInteraction* surfIntx );

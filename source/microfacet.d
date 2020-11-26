@@ -29,13 +29,14 @@ class MicrofacetReflection : BaseBxDF
     */
 	override pure const @safe @nogc nothrow
 	Spectrum F( in vec3 wo, in vec3 wi )
-	{
+	{   
 		const float cosThetaO = CosTheta( wo );
 		const float cosThetaI = CosTheta( wi );
 
 		/// Half-angle vector
 		vec3 wh = wo + wi;
 
+        
         /// Handle degenerate cases
 		///
 		if ( cosThetaO == 0.0f || cosThetaI == 0.0f ) { return Spectrum(0.0f); }
@@ -45,10 +46,14 @@ class MicrofacetReflection : BaseBxDF
         const vec3 n = vec3( 0.0f, 0.0f, 1.0f );
 		
 		Spectrum fresnel = m_fresnel.Evaluate(v_dot( wh, FaceForward( wh, n )) );
+        // Spectrum fresnel = Spectrum( Fresnel_Dielectric( v_dot(wh, FaceForward(wh,n)), 1.5f, 1.0f ) );
 
+        return m_R*m_distribution.D( wh )* m_distribution.G( wo, wi )*fresnel/(4.0f*cosThetaO*cosThetaI);
+        /*
 		return
 			m_R * m_distribution.D( wh ) * m_distribution.G( wo, wi ) * fresnel /
 			(4.0f*cosThetaO*cosThetaI);
+        */
 	}
 
 	/**
@@ -269,12 +274,12 @@ class BeckmannDistribution : BaseMicrofacetDistribution
 	{
         import std.math : log, sin, cos, sqrt;
 		
-		if ( m_sampleVisibleNormals )
-		{
-			// F_TODO::
-			return vec3( 0.0f );
-		}
-		else
+		// if ( m_sampleVisibleNormals )
+		// {
+		// 	// F_TODO::
+		// 	return vec3( 0.0f );
+		// }
+		// else
 		{
 			float tan2Theta = 0.0f;
 			float phi       = 0.0f;

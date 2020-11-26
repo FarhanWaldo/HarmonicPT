@@ -195,7 +195,7 @@ void main( string[] args)
     IMaterial lambertWhite     = *geoAlloc.AllocInstance!MatteMaterial( &texWhite ); 
     IMaterial brickWallAlbedo  = *geoAlloc.AllocInstance!MatteMaterial( &texImgBrickWall );
     IMaterial fresnelSpecMtl   = *geoAlloc.AllocInstance!FresnelSpecMaterial( &texWhite, 1.0f, 1.7f );
-    IMaterial plasticMtl       = *geoAlloc.AllocInstance!PlasticMaterial( &texGreen, &texWhite, &texConst, true /* remap roughness */ );
+    IMaterial plasticMtl       = *geoAlloc.AllocInstance!PlasticMaterial( &texRed, &texWhite, &texConst, true /* remap roughness */ );
     
     // MakeSphereSurfacePrim( vec3( 0.0f, 1.0f, 4.5f ), 2.0f, &brickWallAlbedo );
     MakeSphereSurfacePrim( vec3( 0.0f, 1.0f, 4.5f ), 2.0f, &plasticMtl );
@@ -211,7 +211,7 @@ void main( string[] args)
 
     import light;   
     auto sph_lightGeo = MakeSphere( vec3( 0.0f, 8.0f, -1.0f ), 3.0f );
-    auto sph_light = cast(LightCommon*) geoAlloc.AllocInstance!DiffuseAreaLight( Spectrum(2.0f, 2.0f, 2.0f), sph_lightGeo, 10 /* num samples */ );
+    auto sph_light = cast(LightCommon*) geoAlloc.AllocInstance!DiffuseAreaLight( Spectrum(1.5f), sph_lightGeo, 10 /* num samples */ );
     auto prim_light = cast(PrimCommon*) geoAlloc.AllocInstance!EmissiveSurfacePrim( sph_lightGeo, nullMtl, sph_light );
     primBuffer.Push( prim_light );
     

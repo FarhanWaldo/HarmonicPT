@@ -136,7 +136,8 @@ vec3 FaceForward( in vec3 v, in vec3 n ) {
 ///
 ///  Fresnel implementation
 ///
-interface IFresnel
+// interface IFresnel
+abstract class IFresnel
 {
     pure @nogc @safe const nothrow
     Spectrum Evaluate( float cosIncidence );
@@ -166,7 +167,9 @@ class FresnelDielectric : IFresnel
     pure @nogc @safe const nothrow override
     Spectrum Evaluate( float cosIncidence )
     {
-        return Spectrum( Fresnel_Dielectric( cosIncidence, m_etaI, m_etaT ) );
+        // return Spectrum( Fresnel_Dielectric( cosIncidence, m_etaI, m_etaT ) );
+        float fresnel = Fresnel_Dielectric( cosIncidence, m_etaI, m_etaT );
+        return vec3( fresnel, fresnel, fresnel);
     }
 }
 
