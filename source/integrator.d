@@ -39,7 +39,7 @@ struct FilmTile
 }
 
 
-interface IIntegrator
+abstract class IIntegrator
 {
     void Init( in Scene* scene,  IMemAlloc* memArena );
 
@@ -51,7 +51,7 @@ interface IIntegrator
     bool RenderProgression( Scene* scene, int numProgressions = 1 );
 }
 
-class SamplerIntegrator : IIntegrator
+abstract class SamplerIntegrator : IIntegrator
 {
     BaseSampler*    m_sampler;
 	Camera          m_camera;
@@ -73,7 +73,7 @@ class SamplerIntegrator : IIntegrator
 		  uint numThreads,
 		  uint maxProgressions = 128,
 		  uint maxBounces = 6,
-		  ulong perThreadArenaSizeBytes = MegaBytes(2))
+		  ulong perThreadArenaSizeBytes = MegaBytes(4))
     {
         m_sampler         = sampler;
         m_camera          = cam;
@@ -84,6 +84,19 @@ class SamplerIntegrator : IIntegrator
 		m_perThreadArenaSizeBytes = perThreadArenaSizeBytes;
     }
 
+    /**
+        Pure virtual; sub-classed integrators can implement this function to compute irradiance along a ray,
+        which will get invoked by RenderProgression here as required to generate the image.
+     */
+    Spectrum
+    Irradiance(
+        in  Ray      ray,
+        Scene*          scene,
+        BaseSampler*    sampler,
+        IMemAlloc*      memArena,
+        int             depth = 0 );
+
+    
     override void
     Init( in Scene* scene, IMemAlloc* memArena )
     {
@@ -150,6 +163,7 @@ class SamplerIntegrator : IIntegrator
 					Spectrum pixelColour = Spectrum(0.0);
 					foreach ( progression; 0 .. numProgressions )
 					{
+						m_perThreadArena[threadId].Reset();
 						const vec2 pixelPos = vec2( cast(float) i, cast(float) j );
 						const vec2 jitteredPos = pixelPos + m_sampler.Get2D();
 
@@ -157,8 +171,6 @@ class SamplerIntegrator : IIntegrator
 						m_camera.SpawnRay( jitteredPos, cameraDims, cameraRay );
 
 						pixelColour += Irradiance( cameraRay, scene, &m_perThreadSampler[threadId] , &m_perThreadArena[threadId] );
-
-						m_perThreadArena[threadId].Reset();
 					}
 
 					const float ir = pixelColour.r;
@@ -179,18 +191,6 @@ class SamplerIntegrator : IIntegrator
 		const bool renderFinished = m_finishedProgressions >= m_maxProgressions;
 		return renderFinished;
     }
-
-    Spectrum
-    Irradiance(
-        in  Ray      ray,
-        Scene*          scene,
-        BaseSampler*    sampler,
-        IMemAlloc*      memArena,
-        int             depth = 0 )
-    {
-        return vec3( 0.0, 0.0, 1.0 ); // Output just red
-    }
-
 }
 
 enum LightingStrategy

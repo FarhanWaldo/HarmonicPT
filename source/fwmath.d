@@ -255,10 +255,6 @@ struct VecT( Type, int Dim )
     this( Type v )
     {
 	    data[] = v;
-        // data[0] = v;
-        // data[1] = v;
-        // static if ( Dim >= 3 ) data[2] = v;
-        // static if ( Dim >= 4 ) data[3] = v;
     }
 
     //  Specialise constructor by dimension
@@ -308,7 +304,9 @@ struct VecT( Type, int Dim )
 	@nogc @safe nothrow
     void normalise()
     {
-        this = (Type( 1 )/this.magnitude)*this;
+        float mag = this.magnitude();
+        if ( mag != Type(0.0))
+            this = (Type( 1 )/mag)*this;
     }
 
     pure const @nogc @safe nothrow

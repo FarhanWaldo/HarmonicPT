@@ -9,10 +9,10 @@ enum BxDFTypeFlag
 {
     None             = 0,
     Reflection       = 1 << 0,
-	Transmission     = 1 << 1,
-	Diffuse          = 1 << 2,
-	Glossy           = 1 << 3,
-	Specular         = 1 << 4,
+    Transmission     = 1 << 1,
+    Diffuse          = 1 << 2,
+    Glossy           = 1 << 3,
+    Specular         = 1 << 4,
 }
 import std.typecons;
 alias BitFlags!(BxDFTypeFlag, Yes.unsafe) BxDFType;
@@ -24,7 +24,7 @@ enum BxDFType BxDFType_Diffuse      = BxDFTypeFlag.Diffuse;
 enum BxDFType BxDFType_Glossy       = BxDFTypeFlag.Glossy;
 enum BxDFType BxDFType_Specular     = BxDFTypeFlag.Specular;
 enum BxDFType BxDFType_All =
-	BxDFType_Reflection | BxDFType_Transmission | BxDFType_Diffuse | BxDFType_Glossy | BxDFType_Specular;
+    BxDFType_Reflection | BxDFType_Transmission | BxDFType_Diffuse | BxDFType_Glossy | BxDFType_Specular;
 enum BxDFType BxDFType_AllNonSpecular = BxDFType_All & ~BxDFType_Specular;
 
 pure @safe @nogc nothrow bool IsSpecular( BxDFType flags ) { return ((flags & BxDFType_Specular) == BxDFType_Specular); }
@@ -61,36 +61,36 @@ pure @safe @nogc nothrow float Sin2Theta( in vec3 w )       { return Max( 0.0, 1
 pure @safe @nogc nothrow float SinTheta( in vec3 w )        { return sqrt( Sin2Theta( w ) ); }
 pure @safe @nogc nothrow float TanTheta( in vec3 w )        { return SinTheta( w ) / CosTheta( w ); }
 pure @safe @nogc nothrow float Tan2Theta( in vec3 w )       { return Sin2Theta( w ) / Cos2Theta( w ); }
-
+ 
 pure @safe @nogc nothrow
 float CosPhi( in vec3 w ) {
     float sinTheta = SinTheta( w );
-	return ( sinTheta == 0.0f ) ? 1.0f : Clamp( w.x / sinTheta, -1.0f, 1.0f );
+    return ( sinTheta == 0.0f ) ? 1.0f : Clamp( w.x / sinTheta, -1.0f, 1.0f );
 }
 
 pure @safe @nogc nothrow
 float SinPhi( in vec3 w ) {
     float sinTheta = SinTheta( w );
-	return ( sinTheta == 0.0f ) ? 0.0f : Clamp( w.y / sinTheta, -1.0f, 1.0f );
+    return ( sinTheta == 0.0f ) ? 0.0f : Clamp( w.y / sinTheta, -1.0f, 1.0f );
 }
 
 pure @safe @nogc nothrow
 float Cos2Phi( in vec3 w ) {
     float cosPhi = CosPhi( w );
-	return cosPhi * cosPhi;
+    return cosPhi * cosPhi;
 }
 
 pure @safe @nogc nothrow
 float Sin2Phi( in vec3 w ) {
     float sinPhi = SinPhi( w );
-	return sinPhi*sinPhi;
+    return sinPhi*sinPhi;
 }
 
 
 pure @safe @nogc nothrow
 float CosDPhi( in vec3 wa, in vec3 wb ) {
     return Clamp( (wa.x*wb.x + wa.y*wb.y) / sqrt( wa.x*wa.x + wa.y*wa.y ) * ( wb.x*wb.x + wb.y*wb.y ),
-	               -1.0f, 1.0f );
+                   -1.0f, 1.0f );
 }
 
 pure @safe @nogc nothrow
@@ -102,25 +102,30 @@ pure @safe @nogc nothrow
 bool Refract( in vec3 wi, in vec3 n, float eta, ref vec3 o_wt )
 {
     float cosThetaI = v_dot( n, wi );
-	float sin2ThetaI = Max( 0.0f, 1.0f - cosThetaI * cosThetaI );
-	float sin2ThetaT = eta*eta * sin2ThetaI;
+    float sin2ThetaI = Max( 0.0f, 1.0f - cosThetaI * cosThetaI );
+    float sin2ThetaT = eta*eta * sin2ThetaI;
 
-	//  Total internal reflection has occured!
-	//
-	if ( sin2ThetaT >= 1.0f ) { return false; }
+    //  Total internal reflection has occured!
+    //
+    if ( sin2ThetaT >= 1.0f ) { return false; }
 
-	// F_TODO:: double check math for refracted direction...
-	//
-	float cosThetaT = sqrt( Max( 0.0f, 1.0f - sin2ThetaT ) );
-	o_wt = v_normalise( -eta*wi + ( eta*cosThetaI - cosThetaT)*n );
+    // F_TODO:: double check math for refracted direction...
+    //
+    float cosThetaT = sqrt( Max( 0.0f, 1.0f - sin2ThetaT ) );
+    o_wt = v_normalise( -eta*wi + ( eta*cosThetaI - cosThetaT)*n );
 
-	return true;
+    return true;
 }
 
 
 pure @safe @nogc nothrow
 bool SameHemisphere( in vec3 a, in vec3 b ) {
     return ( a.z * b.z ) > 0.0f;
+}
+
+pure @safe @nogc nothrow
+bool OnOppositeHemispheres( in vec3 a, in vec3 b ) {
+    return (a.z*b.z) < 0.0f;
 }
 
 pure @safe @nogc nothrow
@@ -131,38 +136,41 @@ vec3 FaceForward( in vec3 v, in vec3 n ) {
 ///
 ///  Fresnel implementation
 ///
-interface IFresnel
+// interface IFresnel
+abstract class IFresnel
 {
-	pure @nogc const nothrow
-	Spectrum Evaluate( float cosIncidence );
+    pure @nogc @safe const nothrow
+    Spectrum Evaluate( float cosIncidence );
 }
 
 class FresnelConstant : IFresnel
 {
-	pure @nogc const nothrow override
-	Spectrum Evaluate( float cosIncidence )
-	{
+    pure @nogc @safe const nothrow override
+    Spectrum Evaluate( float cosIncidence )
+    {
         return Spectrum( 1.0f );
-	}
+    }
 }
 
 class FresnelDielectric : IFresnel
 {
     float m_etaI;  /// index of refraction in incident medium
-	float m_etaT;  /// index of refraction in transmitted medium
+    float m_etaT;  /// index of refraction in transmitted medium
 
-    pure @nogc const nothrow
-	this( float etaIncident, float etaTransmitted )
-	{
-		m_etaI = etaIncident;
-		m_etaT = etaTransmitted;
-	}
-	
-	pure @nogc const nothrow override
-	Spectrum Evaluate( float cosIncidence )
-	{
-		return Spectrum( Fresnel_Dielectric( cosIncidence, m_etaI, m_etaT ) );
-	}
+    pure @nogc @safe const nothrow
+    this( float etaIncident, float etaTransmitted )
+    {
+        m_etaI = etaIncident;
+        m_etaT = etaTransmitted;
+    }
+    
+    pure @nogc @safe const nothrow override
+    Spectrum Evaluate( float cosIncidence )
+    {
+        // return Spectrum( Fresnel_Dielectric( cosIncidence, m_etaI, m_etaT ) );
+        float fresnel = Fresnel_Dielectric( cosIncidence, m_etaI, m_etaT );
+        return vec3( fresnel, fresnel, fresnel);
+    }
 }
 
 /**
@@ -212,32 +220,32 @@ abstract class BaseBxDF
     const BxDFType    m_type;
 
     pure @safe @nogc nothrow
-	this( BxDFType typeFlags )
-	{
-	    m_type = typeFlags;
-	}
+    this( BxDFType typeFlags )
+    {
+        m_type = typeFlags;
+    }
 
     pure const @safe @nogc nothrow final
-	BxDFType GetType() { return m_type; }
-	
-	pure const @safe @nogc nothrow final
-	bool MatchesType( BxDFType typeFlags ) {
-	    return ( m_type & typeFlags ) == m_type;
-	}
+    BxDFType GetType() { return m_type; }
+    
+    pure const @safe @nogc nothrow final
+    bool MatchesType( BxDFType typeFlags ) {
+        return ( m_type & typeFlags ) == m_type;
+    }
 
     pure const @safe @nogc nothrow final
-	bool IsSpecular()
-	{
-		return ( m_type & BxDFType_Specular ) == BxDFType_Specular;
-	}
-	    
-	//  BxDF Args:
-	//
-	//  wo = outgoing lighting direction on surface
-	//  wi = incident lighting direction
-	//
+    bool IsSpecular()
+    {
+        return ( m_type & BxDFType_Specular ) == BxDFType_Specular;
+    }
+        
+    //  BxDF Args:
+    //
+    //  wo = outgoing lighting direction on surface
+    //  wi = incident lighting direction
+    //
 
-	/**
+    /**
         Evaluate the BxDF for a given outgoing and incident lighting direction
         Params:
             wo = outgoing direction
@@ -245,11 +253,11 @@ abstract class BaseBxDF
         Returns:
             The ratio of reflected irradiance heading towards wo
     */
-	pure const @safe @nogc nothrow
-	Spectrum F( in vec3 wo, in vec3 wi );
+    pure const @safe @nogc nothrow
+    Spectrum F( in vec3 wo, in vec3 wi );
 
     // F_TODO:: Document the parameters of these methods.
-	
+    
     /**
         Generates a sampling direction (o_wi) and PDF (o_pdf) give na random sample u (2D uniform random number)
 
@@ -258,57 +266,57 @@ abstract class BaseBxDF
         NOTE:: The default implementation of Sample_F and Pdf is for cosine hemisphere sampling
                If a new sampling technique needs to be written, Pdf must also be changed accordingly
     */
-	pure const @safe @nogc nothrow
+    pure const @safe @nogc nothrow
     Spectrum Sample_F(
-	    in vec3     wo,    
-		in vec2     u,
-		ref vec3    o_wi,
-	    float*      o_pdf,
-		BxDFType*   o_sampledType = null )
-	{
+        in vec3     wo,    
+        in vec2     u,
+        ref vec3    o_wi,
+        float*      o_pdf,
+        BxDFType*   o_sampledType = null )
+    {
         o_wi = CosineSampleHemisphere( u );
-		if ( wo.z < 0.0f ) {
-		    o_wi.z *= -1.0f;
-		}
-		*o_pdf = Pdf( wo, o_wi );
-		return F( wo, o_wi );
-	}
+        if ( wo.z < 0.0f ) {
+            o_wi.z *= -1.0f;
+        }
+        *o_pdf = Pdf( wo, o_wi );
+        return F( wo, o_wi );
+    }
 
-	/**
+    /**
         Returns the PDF value for a pair of incoming and outgoing directions
 
         NOTE:: Does cosine hemisphere sampling by default. If a different PDF function is desired,
                then Sample_F must also be updated
     */
-	pure const @safe @nogc nothrow
-	float Pdf( in vec3 wo, in vec3 wi )
-	{
-	    return SameHemisphere( wo, wi ) ? AbsCosTheta( wi )*INV_PI : 0.0f;
-	}
+    pure const @safe @nogc nothrow
+    float Pdf( in vec3 wo, in vec3 wi )
+    {
+        return SameHemisphere( wo, wi ) ? AbsCosTheta( wi )*INV_PI : 0.0f;
+    }
 
 
-	/// F_TODO:: Add default routines for calculating hemispherical reflectances below
-	///`
-	/**
+    /// F_TODO:: Add default routines for calculating hemispherical reflectances below
+    ///`
+    /**
         Compute the Hemispherical-Directional reflectance on the surface in the direction wo
         The integral of the BDRF toward wo over the hemisphere of incoming directions
     */
-	pure const @safe @nogc nothrow
+    pure const @safe @nogc nothrow
     Spectrum Rho( in vec3 wo, in vec2[] samples )
-	{
-		return Spectrum(0.0f); /// F_TODO:: Need to implement this
-	}
+    {
+        return Spectrum(0.0f); /// F_TODO:: Need to implement this
+    }
 
-	/**
+    /**
         Compute the average Hemispherical-Hemispherical reflection on the surface.
         The same as the Hemispheriecal-Directional reflectance, but averaged over the hemisphere
           of outgoing directions.
     */
-	pure const @safe @nogc nothrow
+    pure const @safe @nogc nothrow
     Spectrum Rho( in vec2[] samples1, in vec2[] samples2 )
-	{
-		return Spectrum( 0.0f ); /// F_TODO:: Need to implement this
-	}
+    {
+        return Spectrum( 0.0f ); /// F_TODO:: Need to implement this
+    }
 }
 
 
@@ -317,12 +325,12 @@ class LambertBRDF : BaseBxDF
     Spectrum m_R;
 
     this( Spectrum reflectance )
-	{
-	    super( BxDFType_Diffuse | BxDFType_Reflection );
-		m_R = reflectance;
-	}
-	
-	/**
+    {
+        super( BxDFType_Diffuse | BxDFType_Reflection );
+        m_R = reflectance;
+    }
+    
+    /**
         Evaluate the BxDF for a given outgoing and incident lighting direction
         Params:
             wo = outgoing direction
@@ -330,49 +338,49 @@ class LambertBRDF : BaseBxDF
         Returns:
             The ratio of reflected irradiance heading towards wo
     */
-	override pure const @safe @nogc nothrow
-	Spectrum F( in vec3 wo, in vec3 wi )
-	{
-	    return m_R*INV_PI;
-	}
+    override pure const @safe @nogc nothrow
+    Spectrum F( in vec3 wo, in vec3 wi )
+    {
+        return m_R*INV_PI;
+    }
 
 
-	/**
+    /**
         Compute the Hemispherical-Directional reflectance on the surface in the direction wo
         The integral of the BDRF toward wo over the hemisphere of incoming directions
     */
-	override pure const @safe @nogc nothrow
+    override pure const @safe @nogc nothrow
     Spectrum Rho( in vec3 wo, in vec2[] samples )
-	{
-	    return m_R;
-	}
+    {
+        return m_R;
+    }
 
-	/**
+    /**
         Compute the average Hemispherical-Hemispherical reflection on the surface.
         The same as the Hemispheriecal-Directional reflectance, but averaged over the hemisphere
           of outgoing directions.
     */
-	override pure const @safe @nogc nothrow
+    override pure const @safe @nogc nothrow
     Spectrum Rho( in vec2[] samples1, in vec2[] samples2 )
-	{
+    {
         return m_R;
-	}
+    }
 }
 
 
 class SpecularReflectionBRDF : BaseBxDF
 {
-	const Spectrum  m_R;
-	const IFresnel* m_fresnel;
+    const Spectrum  m_R;
+    const IFresnel* m_fresnel;
 
-	this( Spectrum tint, IFresnel* fresnel )
-	{
-		super( BxDFType_Reflection | BxDFType_Specular );
-		m_R         = tint;
-		m_fresnel   = fresnel;
-	}
+    this( Spectrum tint, IFresnel* fresnel )
+    {
+        super( BxDFType_Reflection | BxDFType_Specular );
+        m_R         = tint;
+        m_fresnel   = fresnel;
+    }
 
-	/**
+    /**
         Evaluate the BxDF for a given outgoing and incident lighting direction.
         Since this represents a specular scattering event, we make F() return 0 for an arbitrary incidence and exitant angle        
 
@@ -382,23 +390,23 @@ class SpecularReflectionBRDF : BaseBxDF
         Returns:
             Returns an empty spectrum
     */
-	override pure const @safe @nogc nothrow
-	Spectrum F( in vec3 wo, in vec3 wi )
-	{
-	    return Spectrum(0.0f);
-	}
+    override pure const @safe @nogc nothrow
+    Spectrum F( in vec3 wo, in vec3 wi )
+    {
+        return Spectrum(0.0f);
+    }
 
-	/**
+    /**
         Returns the PDF value for a pair of incoming and outgoing directions. Since this is a specular event,
         its PDF is technically described by a dirac delta function, and we'll be returning 0 for the PDF method.
         Specular lobes must be used by Sample_F()
     */
-	override pure const @safe @nogc nothrow
-	float Pdf( in vec3 wo, in vec3 wi )
-	{
-	    return 0.0f;
-	}
-	
+    override pure const @safe @nogc nothrow
+    float Pdf( in vec3 wo, in vec3 wi )
+    {
+        return 0.0f;
+    }
+    
     /**
         Generates a sampling direction (o_wi) and PDF (o_pdf) given a random sample u (2D uniform random number)
 
@@ -406,23 +414,23 @@ class SpecularReflectionBRDF : BaseBxDF
 
         Always assigns 1.0f to the pdf
     */
-	override pure const @trusted @nogc nothrow
+    override pure const @trusted @nogc nothrow
     Spectrum Sample_F(
-	    in vec3     wo,    
-		in vec2     u,
-		ref vec3    o_wi,
-	    float*      o_pdf,
-		BxDFType*   o_sampledType = null )
-	{
-		o_wi = vec3( -1.0f*wo.x, -1.0f*wo.y, wo.z );
-		*o_pdf = 1.0f; /// Delta distribution
+        in vec3     wo,    
+        in vec2     u,
+        ref vec3    o_wi,
+        float*      o_pdf,
+        BxDFType*   o_sampledType = null )
+    {
+        o_wi = vec3( -1.0f*wo.x, -1.0f*wo.y, wo.z );
+        *o_pdf = 1.0f; /// Delta distribution
 
-		if ( o_sampledType )
-		{
-		    *o_sampledType = BxDFType_Specular | BxDFType_Reflection;
-		}
+        if ( o_sampledType )
+        {
+            *o_sampledType = BxDFType_Specular | BxDFType_Reflection;
+        }
 
-		return m_fresnel.Evaluate(CosTheta(o_wi)) * m_R / AbsCosTheta( o_wi );
+        return m_fresnel.Evaluate(CosTheta(o_wi)) * m_R / AbsCosTheta( o_wi );
     }
 
 }
@@ -430,25 +438,25 @@ class SpecularReflectionBRDF : BaseBxDF
 class SpecularTransmissionBTDF : BaseBxDF
 {
     Spectrum m_T;
-	float    m_etaI;
-	float    m_etaT;
-	
-	FresnelDielectric* m_fresnel;
-	///
-	// const TransportMode m_transportMode; // F_TODO::[LightTracing]
+    float    m_etaI;
+    float    m_etaT;
+    
+    FresnelDielectric* m_fresnel;
+    ///
+    // const TransportMode m_transportMode; // F_TODO::[LightTracing]
 
-	this( Spectrum t, float etaI, float etaT, FresnelDielectric* fresnel )
-	{
-	    super( BxDFType_Specular | BxDFType_Transmission );
+    this( Spectrum t, float etaI, float etaT, FresnelDielectric* fresnel )
+    {
+        super( BxDFType_Specular | BxDFType_Transmission );
 
-		m_T        = t;
-	    m_etaI     = etaI;
-		m_etaT     = etaT;
-		m_fresnel  = fresnel;
-	}
+        m_T        = t;
+        m_etaI     = etaI;
+        m_etaT     = etaT;
+        m_fresnel  = fresnel;
+    }
 
 
-	/**
+    /**
         Evaluate the BxDF for a given outgoing and incident lighting direction.
         Since this represents a specular scattering event, we make F() return 0 for an arbitrary incidence and exitant angle        
 
@@ -458,23 +466,23 @@ class SpecularTransmissionBTDF : BaseBxDF
         Returns:
             Returns an empty spectrum
     */
-	override pure const @safe @nogc nothrow
-	Spectrum F( in vec3 wo, in vec3 wi )
-	{
-	    return Spectrum(0.0f);
-	}
+    override pure const @safe @nogc nothrow
+    Spectrum F( in vec3 wo, in vec3 wi )
+    {
+        return Spectrum(0.0f);
+    }
 
-	/**
+    /**
         Returns the PDF value for a pair of incoming and outgoing directions. Since this is a specular event,
         its PDF is technically described by a dirac delta function, and we'll be returning 0 for the PDF method.
         Specular lobes must be used by Sample_F()
     */
-	override pure const @safe @nogc nothrow
-	float Pdf( in vec3 wo, in vec3 wi )
-	{
-	    return 0.0f;
-	}
-	
+    override pure const @safe @nogc nothrow
+    float Pdf( in vec3 wo, in vec3 wi )
+    {
+        return 0.0f;
+    }
+    
     /**
         Generates a sampling direction (o_wi) and PDF (o_pdf) given a random sample u (2D uniform random number)
 
@@ -482,66 +490,66 @@ class SpecularTransmissionBTDF : BaseBxDF
 
         Always assigns 1.0f to the pdf
     */
-	override pure const @trusted @nogc nothrow
+    override pure const @trusted @nogc nothrow
     Spectrum Sample_F(
-	    in vec3     wo,    
-		in vec2     u,
-		ref vec3    o_wi,
-	    float*      o_pdf,
-		BxDFType*   o_sampledType = null )
-	{
-		const bool entering = CosTheta( wo ) > 0.0f;
-		const float etaI    = entering ? m_etaI : m_etaT;
-		const float etaT    = entering ? m_etaT : m_etaI;
+        in vec3     wo,    
+        in vec2     u,
+        ref vec3    o_wi,
+        float*      o_pdf,
+        BxDFType*   o_sampledType = null )
+    {
+        const bool entering = CosTheta( wo ) > 0.0f;
+        const float etaI    = entering ? m_etaI : m_etaT;
+        const float etaT    = entering ? m_etaT : m_etaI;
 
         const vec3 z = vec3( 0.0f, 0.0f, 1.0f );
-		const vec3 orientedNormal = FaceForward( wo, z ); /// Returns -z if wo and z are on opposite hemispheres
+        const vec3 orientedNormal = FaceForward( wo, z ); /// Returns -z if wo and z are on opposite hemispheres
 
-		if ( !Refract( wo, orientedNormal, etaI/etaT, o_wi ) )
-		{
-		    ///    We have total internal refraction in this case. No transmission, return empty spectrum!
-			///
-		    return Spectrum( 0.0f );
-		}
+        if ( !Refract( wo, orientedNormal, etaI/etaT, o_wi ) )
+        {
+            ///    We have total internal refraction in this case. No transmission, return empty spectrum!
+            ///
+            return Spectrum( 0.0f );
+        }
 
-		if ( o_sampledType )
-		{
-		    *o_sampledType = BxDFType_Specular | BxDFType_Transmission;
-		}
+        if ( o_sampledType )
+        {
+            *o_sampledType = BxDFType_Specular | BxDFType_Transmission;
+        }
 
-		*o_pdf = 1.0f;
+        *o_pdf = 1.0f;
 
-		///  The amount of light transmitted is 1 - the amount reflected (fresnel response)
-		///
-		const Spectrum transmittedEnergy = Spectrum(1.0f) - m_fresnel.Evaluate(CosTheta(o_wi));
+        ///  The amount of light transmitted is 1 - the amount reflected (fresnel response)
+        ///
+        const Spectrum transmittedEnergy = Spectrum(1.0f) - m_fresnel.Evaluate(CosTheta(o_wi));
 
         /// F_TODO:: Add check here for if transport mode is radiance
-		/// Radiant flux is scaled up as light passes through a medium, due to relying on spatial density 
-		///
-		const float scale = (etaI*etaI)/(etaT*etaT); //// F_TODO:: verify if this correct scaling 
-		
-		return (scale/AbsCosTheta(o_wi))*m_T*transmittedEnergy;
+        /// Radiant flux is scaled up as light passes through a medium, due to relying on spatial density 
+        ///
+        const float scale = (etaI*etaI)/(etaT*etaT); //// F_TODO:: verify if this correct scaling 
+        
+        return (scale/AbsCosTheta(o_wi))*m_T*transmittedEnergy;
     }
 }
 
 class FresnelSpecularBxDF : BaseBxDF
 {
     const Spectrum m_R;
-	const Spectrum m_T;
-	const float    m_etaI;
-	const float    m_etaT;
+    const Spectrum m_T;
+    const float    m_etaI;
+    const float    m_etaT;
     
     this( in Spectrum R, in Spectrum T, float etaI, float etaT )
-	{
-	    super( BxDFType_Specular | BxDFType_Reflection | BxDFType_Transmission );
+    {
+        super( BxDFType_Specular | BxDFType_Reflection | BxDFType_Transmission );
 
-		m_R        = R;
-		m_T        = T;
-		m_etaI     = etaI;
-		m_etaT     = etaT;
-	}
-	
-	/**
+        m_R        = R;
+        m_T        = T;
+        m_etaI     = etaI;
+        m_etaT     = etaT;
+    }
+    
+    /**
         Evaluate the BxDF for a given outgoing and incident lighting direction.
         Since this represents a specular scattering event, we make F() return 0 for an arbitrary incidence and exitant angle        
 
@@ -551,22 +559,22 @@ class FresnelSpecularBxDF : BaseBxDF
         Returns:
             Returns an empty spectrum
     */
-	override pure const @safe @nogc nothrow
-	Spectrum F( in vec3 wo, in vec3 wi )
-	{
-	    return Spectrum(0.0f);
-	}
+    override pure const @safe @nogc nothrow
+    Spectrum F( in vec3 wo, in vec3 wi )
+    {
+        return Spectrum(0.0f);
+    }
 
-	/**
+    /**
         Returns the PDF value for a pair of incoming and outgoing directions. Since this is a specular event,
         its PDF is technically described by a dirac delta function, and we'll be returning 0 for the PDF method.
         Specular lobes must be used by Sample_F()
     */
-	override pure const @safe @nogc nothrow
-	float Pdf( in vec3 wo, in vec3 wi )
-	{
-	    return 0.0f;
-	}
+    override pure const @safe @nogc nothrow
+    float Pdf( in vec3 wo, in vec3 wi )
+    {
+        return 0.0f;
+    }
 
     /**
         Generates a sampling direction (o_wi) and PDF (o_pdf) given a random sample u (2D uniform random number)
@@ -575,69 +583,69 @@ class FresnelSpecularBxDF : BaseBxDF
 
         Always assigns 1.0f to the pdf
     */
-	override pure const @trusted @nogc nothrow
+    override pure const @trusted @nogc nothrow
     Spectrum Sample_F(
-	    in vec3     wo,    
-		in vec2     u,
-		ref vec3    o_wi,
-	    float*      o_pdf,
-		BxDFType*   o_sampledType = null )
-	{
-	    // const float fresnel = m_fresnel.Evaluate( CosTheta(wo), m_etaI, m_etaT );
-	    const float fresnel = Fresnel_Dielectric( CosTheta(wo), m_etaI, m_etaT );
+        in vec3     wo,    
+        in vec2     u,
+        ref vec3    o_wi,
+        float*      o_pdf,
+        BxDFType*   o_sampledType = null )
+    {
+        // const float fresnel = m_fresnel.Evaluate( CosTheta(wo), m_etaI, m_etaT );
+        const float fresnel = Fresnel_Dielectric( CosTheta(wo), m_etaI, m_etaT );
         Spectrum radiance = Spectrum(0.0f);
 
-		///  We generate a reflection event if the random probability is less than the fresnel
-		///
-		if ( u.x < fresnel )
-		{
+        ///  We generate a reflection event if the random probability is less than the fresnel
+        ///
+        if ( u.x < fresnel )
+        {
             o_wi = vec3( -1.0f*wo.x, -1.0f*wo.y, wo.z );
-			*o_pdf = fresnel;
+            *o_pdf = fresnel;
 
             radiance = fresnel*m_R / AbsCosTheta(o_wi);
-			
-		    if ( o_sampledType )
-			{
-			    *o_sampledType = BxDFType_Specular | BxDFType_Reflection;
-			}
-		}
-		///  We generate a transmission event in the other case
-		///
-		else
-		{
-			const bool entering = CosTheta( wo ) > 0.0f;
-			const float etaI    = entering ? m_etaI : m_etaT;
-			const float etaT    = entering ? m_etaT : m_etaI;
+            
+            if ( o_sampledType )
+            {
+                *o_sampledType = BxDFType_Specular | BxDFType_Reflection;
+            }
+        }
+        ///  We generate a transmission event in the other case
+        ///
+        else
+        {
+            const bool entering = CosTheta( wo ) > 0.0f;
+            const float etaI    = entering ? m_etaI : m_etaT;
+            const float etaT    = entering ? m_etaT : m_etaI;
 
-			const vec3 z = vec3( 0.0f, 0.0f, 1.0f );
-			const vec3 orientedNormal = FaceForward( wo, z ); /// Returns -z if wo and z are on opposite hemispheres
+            const vec3 z = vec3( 0.0f, 0.0f, 1.0f );
+            const vec3 orientedNormal = FaceForward( wo, z ); /// Returns -z if wo and z are on opposite hemispheres
 
-			if ( !Refract( wo, orientedNormal, etaI/etaT, o_wi ) )
-			{
-				///    We have total internal refraction in this case. No transmission, return empty spectrum!
-				///
-				return Spectrum( 0.0f );
-			}
+            if ( !Refract( wo, orientedNormal, etaI/etaT, o_wi ) )
+            {
+                ///    We have total internal refraction in this case. No transmission, return empty spectrum!
+                ///
+                return Spectrum( 0.0f );
+            }
 
-			*o_pdf = 1.0f - fresnel;
+            *o_pdf = 1.0f - fresnel;
 
-			///  The amount of light transmitted is 1 - the amount reflected (fresnel response)
-			///
-			const Spectrum transmittedEnergy = Spectrum(1.0f - fresnel);
+            ///  The amount of light transmitted is 1 - the amount reflected (fresnel response)
+            ///
+            const Spectrum transmittedEnergy = Spectrum(1.0f - fresnel);
 
-			/// F_TODO:: Add check here for if transport mode is radiance
-			/// Radiant flux is scaled up as light passes through a medium, due to relying on spatial density 
-			///
-			const float scale = (etaI*etaI)/(etaT*etaT); //// F_TODO:: verify if this correct scaling 
+            /// F_TODO:: Add check here for if transport mode is radiance
+            /// Radiant flux is scaled up as light passes through a medium, due to relying on spatial density 
+            ///
+            const float scale = (etaI*etaI)/(etaT*etaT); //// F_TODO:: verify if this correct scaling 
 
-			radiance = (scale/AbsCosTheta(o_wi))*m_T*transmittedEnergy;
+            radiance = (scale/AbsCosTheta(o_wi))*m_T*transmittedEnergy;
 
-		    if ( o_sampledType )
-			{
-			    *o_sampledType = BxDFType_Specular | BxDFType_Transmission;
-			}
-		}
-		
-	    return radiance;
+            if ( o_sampledType )
+            {
+                *o_sampledType = BxDFType_Specular | BxDFType_Transmission;
+            }
+        }
+        
+        return radiance;
     }
 }
