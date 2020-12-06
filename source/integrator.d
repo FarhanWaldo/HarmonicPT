@@ -12,32 +12,11 @@ import sampling;
 import spectrum;
 import interactions;
 
-
-struct FilmTile
+enum IntegratorType
 {
-    uint m_topLeftX;
-	uint m_topLeftY;
-
-	uint m_tileWidth;
-	uint m_tileHeight;
-
-	uint m_imgWidth;
-	uint m_imgHeight;
-
-
-    this( uint topLeftX, uint topLeftY,
-		  uint tileWidth, uint tileHeight,
-		  uint imgWidth, uint imgHeight )
-	{
-		m_topLeftX     = topLeftX;
-		m_topLeftY     = topLeftY;
-		m_tileWidth    = tileWidth;
-		m_tileHeight   = tileHeight;
-		m_imgWidth     = imgWidth;
-		m_imgHeight    = imgHeight;
-	}
+    DirectLighting,
+    PathTracing
 }
-
 
 abstract class IIntegrator
 {
@@ -53,6 +32,32 @@ abstract class IIntegrator
 
 abstract class SamplerIntegrator : IIntegrator
 {
+    struct FilmTile
+    {
+        uint m_topLeftX;
+        uint m_topLeftY;
+
+        uint m_tileWidth;
+        uint m_tileHeight;
+
+        uint m_imgWidth;
+        uint m_imgHeight;
+
+
+        this( uint topLeftX, uint topLeftY,
+              uint tileWidth, uint tileHeight,
+              uint imgWidth, uint imgHeight )
+        {
+            m_topLeftX     = topLeftX;
+            m_topLeftY     = topLeftY;
+            m_tileWidth    = tileWidth;
+            m_tileHeight   = tileHeight;
+            m_imgWidth     = imgWidth;
+            m_imgHeight    = imgHeight;
+        }
+    }
+
+    
     BaseSampler*    m_sampler;
 	Camera          m_camera;
 	Image_F32*      m_renderBuffer;

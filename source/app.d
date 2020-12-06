@@ -29,18 +29,29 @@ void main( string[] args)
     string imageOutputPath = "renders/render.png";
     uint   imageWidth     = 640;
     uint   imageHeight    = 480;
+    IntegratorType integratorType = IntegratorType.PathTracing;
 
-    auto clResult =
-        getopt( args,
-                "input|i", "The path to the scene file to be rendered.", &inputScenePath,
-                "output|o","The path to write the rendered image to.",&imageOutputPath,
-                "width|w", "Resolution (width)", &imageWidth,
-                "height|h", "Resolution (height)", &imageHeight     
-                );
-                           
-    if ( clResult.helpWanted )
+    try
     {
-        defaultGetoptPrinter("Help for HarmonicPT...", clResult.options);
+        auto clResult =
+            getopt( args,
+                    std.getopt.config.passThrough,
+                    "input|i", "The path to the scene file to be rendered.", &inputScenePath,
+                    "output|o","The path to write the rendered image to.",&imageOutputPath,
+                    "width|x", "Resolution (width)", &imageWidth,
+                    "height|y", "Resolution (height)", &imageHeight,
+                    "integrator", "Integrator type. Can be \'DirectLighting\', and \'PathTracing\' (default)", &integratorType
+                    );
+
+        if ( clResult.helpWanted )
+        {
+            defaultGetoptPrinter("Help for HarmonicPT...", clResult.options);
+            return;
+        }
+    }
+    catch ( std.conv.ConvException e )
+    {
+        writeln("Caught exception: ", e.msg, "\n we are shutting down...");
         return;
     }
     
@@ -249,8 +260,21 @@ void main( string[] args)
 
     
     BaseSampler sampler = new PixelSampler( 32, 0, 43123 /* random seed */ );
+
+    IIntegrator integrator;
+    switch (integratorType)
+    {
+        case IntegratorType.DirectLighting:
+            integrator = new DirectLightingIntegrator( &sampler, renderCam, &renderImage, numCPUs );
+            break;
+
+        case IntegratorType.PathTracing:
+        default:
+            integrator = new PathTracingIntegrator( &sampler, renderCam, &renderImage, numCPUs );
+    }
+    
     // IIntegrator integrator = new DirectLightingIntegrator( &sampler, renderCam, &renderImage, numCPUs );
-    IIntegrator integrator = new PathTracingIntegrator( &sampler, renderCam, &renderImage, numCPUs );
+    // IIntegrator integrator = new PathTracingIntegrator( &sampler, renderCam, &renderImage, numCPUs );
     integrator.Init( &scene, &rootMemAlloc );
 
     //
