@@ -18,6 +18,27 @@ enum IntegratorType
     PathTracing
 }
 
+IIntegrator
+MakeIntegrator(
+    IntegratorType type,
+    BaseSampler*   sampler,
+    Camera         renderCam,
+    Image_F32*     renderBuffer,
+    uint           numThreads,
+    uint           maxProgressions = 64 )
+{
+    switch (type)
+    {
+        case IntegratorType.DirectLighting:
+            return new DirectLightingIntegrator( sampler, renderCam, renderBuffer, numThreads );
+
+        case IntegratorType.PathTracing:
+        default:
+            return new PathTracingIntegrator( sampler, renderCam, renderBuffer, numThreads );
+    }
+
+}
+
 abstract class IIntegrator
 {
     void Init( in Scene* scene,  IMemAlloc* memArena );
